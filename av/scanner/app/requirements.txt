@@ -1,0 +1,6 @@
+fastapi==0.109.0
+uvicorn==0.27.0
+python-multipart==0.0.6
+clamd==1.0.2
+yara-python==4.3.1
+aiohttp==3.9.1

@@ -1,0 +1,27 @@
+# Sensitive files
+.env
+ssl/
+conf/postgres/pg_hba.conf
+
+# Large files
+*.tar
+*.tar.gz
+*.cvd
+*.cld
+
+# Node modules
+node_modules/
+package-lock.json
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+conf/pgbouncer/userlist.txt
+conf/redis/sentinel.conf
+conf/nextcloud/ldap.config.php
+av/scanner/app/engines_config.json
+av/scanner/rules/*.yar
+!av/scanner/rules/eicar.yar

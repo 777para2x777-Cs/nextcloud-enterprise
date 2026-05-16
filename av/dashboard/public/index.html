@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+<meta charset="UTF-8">
+<title>داشبورد آنتی‌ویروس</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Tahoma,Arial,sans-serif;background:#0f172a;color:#e2e8f0;direction:rtl}
+.header{background:#1e293b;padding:20px 30px;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:22px;color:#38bdf8}
+.header p{font-size:13px;color:#94a3b8;margin-top:4px}
+.logout{padding:6px 16px;background:#450a0a;color:#f87171;border:none;border-radius:6px;cursor:pointer;font-size:13px}
+.container{padding:24px 30px;max-width:1400px;margin:0 auto}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.card{background:#1e293b;border-radius:12px;padding:20px;border:1px solid #334155}
+.card .label{font-size:12px;color:#94a3b8;margin-bottom:8px}
+.card .value{font-size:32px;font-weight:bold}
+.blue{color:#38bdf8}.green{color:#4ade80}.red{color:#f87171}.yellow{color:#fbbf24}
+.section{background:#1e293b;border-radius:12px;border:1px solid #334155;margin-bottom:24px}
+.section-header{padding:16px 20px;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center}
+.section-header h2{font-size:16px}
+.engines-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;padding:16px 20px}
+.engine{background:#0f172a;border-radius:8px;padding:16px;border:1px solid #334155}
+.engine-name{font-size:14px;font-weight:bold;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.dot.online{background:#4ade80;box-shadow:0 0 6px #4ade80}
+.dot.offline{background:#f87171}
+.engine-info{font-size:12px;color:#94a3b8;line-height:2}
+.tabs{display:flex;gap:8px;padding:16px 20px;border-bottom:1px solid #334155;flex-wrap:wrap}
+.tab{padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;color:#94a3b8;border:1px solid #334155}
+.tab.active{background:#1d4ed8;color:white;border-color:#1d4ed8}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px 16px;text-align:right;font-size:13px;border-bottom:1px solid #1e293b}
+th{background:#0f172a;color:#94a3b8;font-weight:normal}
+tr:hover{background:#0f172a}
+.badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:bold}
+.badge.clean{background:#14532d;color:#4ade80}
+.badge.infected{background:#450a0a;color:#f87171}
+.btn{padding:6px 14px;border-radius:6px;border:none;cursor:pointer;font-size:12px;margin:2px}
+.btn-danger{background:#450a0a;color:#f87171}
+.btn-primary{background:#1d4ed8;color:white}
+.btn-success{background:#14532d;color:#4ade80}
+.filter-bar{display:flex;gap:8px;padding:12px 16px;flex-wrap:wrap;align-items:center}
+.filter-btn{padding:4px 12px;border-radius:20px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:12px}
+.filter-btn.active{background:#1d4ed8;color:white;border-color:#1d4ed8}
+.empty{text-align:center;color:#94a3b8;padding:30px}
+select,input[type=date]{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:5px 10px;border-radius:6px;font-size:12px}
+.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px}
+.report-card{background:#0f172a;border-radius:8px;padding:16px;border:1px solid #334155}
+.report-card h3{font-size:13px;color:#94a3b8;margin-bottom:12px}
+.report-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1e293b;font-size:12px}
+.pagination{display:flex;gap:8px;padding:12px 16px;align-items:center;justify-content:flex-end}
+.page-btn{padding:4px 10px;border-radius:4px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:12px}
+.page-btn.active{background:#1d4ed8;color:white}
+.update-section{padding:20px}
+.update-card{background:#0f172a;border-radius:8px;padding:20px;border:1px solid #334155;margin-bottom:16px}
+.update-card h3{font-size:14px;margin-bottom:12px;color:#38bdf8}
+.upload-area{border:2px dashed #334155;border-radius:8px;padding:20px;text-align:center;cursor:pointer;margin-bottom:12px}
+.upload-area:hover{border-color:#38bdf8}
+.upload-area input{display:none}
+.result-msg{padding:8px 12px;border-radius:6px;margin-top:8px;font-size:12px;display:none}
+.result-msg.success{background:#14532d;color:#4ade80}
+.result-msg.error{background:#450a0a;color:#f87171}
+.rule-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#1e293b;border-radius:6px;margin-bottom:6px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="header">
+  <div><h1>داشبورد مدیریت آنتی‌ویروس</h1><p>Nextcloud AV Integration</p></div>
+  <button class="logout" id="btn-logout">خروج</button>
+</div>
+<div class="container">
+  <div class="grid">
+    <div class="card"><div class="label">کل اسکن‌ها</div><div class="value blue" id="s-total">-</div></div>
+    <div class="card"><div class="label">فایل‌های سالم</div><div class="value green" id="s-clean">-</div></div>
+    <div class="card"><div class="label">فایل‌های آلوده</div><div class="value red" id="s-infected">-</div></div>
+    <div class="card"><div class="label">در Quarantine</div><div class="value yellow" id="s-quarantine">-</div></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><h2>موتورهای آنتی‌ویروس</h2><span style="font-size:12px;color:#94a3b8">real-time</span></div>
+    <div class="engines-grid" id="engines"></div>
+  </div>
+  <div class="section">
+    <div class="tabs">
+      <div class="tab active" id="tab-btn-scans">تاریخچه اسکن</div>
+      <div class="tab" id="tab-btn-report">گزارش</div>
+      <div class="tab" id="tab-btn-quarantine">Quarantine</div>
+      <div class="tab" id="tab-btn-update">آپدیت</div>
+      <div class="tab" id="tab-btn-engines">موتورها</div>
+    </div>
+    <div id="tab-scans">
+      <div class="filter-bar">
+        <button class="filter-btn active" id="f-all">همه</button>
+        <button class="filter-btn" id="f-infected">آلوده</button>
+        <button class="filter-btn" id="f-clean">سالم</button>
+        <select id="filter-user"><option value="">همه کاربران</option></select>
+      </div>
+      <table><thead><tr><th>نام فایل</th><th>یوزر</th><th>زمان</th><th>وضعیت</th><th>تهدید</th><th>موتور</th></tr></thead>
+      <tbody id="scans-body"><tr><td colspan="6" class="empty">داده‌ای وجود ندارد</td></tr></tbody></table>
+      <div class="pagination" id="pagination"></div>
+    </div>
+    <div id="tab-report" style="display:none">
+      <div class="filter-bar">
+        <select id="report-user"><option value="">همه کاربران</option></select>
+        <span style="font-size:12px;color:#94a3b8">از:</span>
+        <input type="date" id="report-from">
+        <span style="font-size:12px;color:#94a3b8">تا:</span>
+        <input type="date" id="report-to">
+        <button class="btn btn-primary" id="btn-report">اعمال فیلتر</button>
+        <button class="btn btn-success" id="btn-export">دانلود CSV</button>
+      </div>
+      <div id="report-summary" style="padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px"></div>
+      <div class="report-grid">
+        <div class="report-card"><h3>به تفکیک کاربر</h3><div id="report-by-user"></div></div>
+        <div class="report-card"><h3>به تفکیک تاریخ</h3><div id="report-by-date"></div></div>
+      </div>
+    </div>
+    <div id="tab-quarantine" style="display:none">
+      <table><thead><tr><th>نام فایل</th><th>سایز</th><th>زمان قرنطینه</th><th>عملیات</th></tr></thead>
+      <tbody id="q-body"><tr><td colspan="4" class="empty">Quarantine خالی است</td></tr></tbody></table>
+    </div>
+    <div id="tab-engines" style="display:none">
+      <div class="update-section">
+        <div class="update-card">
+          <h3>موتورهای آنتی‌ویروس فعال</h3>
+          <div id="engines-list" style="margin-bottom:16px"></div>
+          <button class="btn btn-primary" id="btn-add-engine">+ اضافه کردن موتور جدید</button>
+        </div>
+        <div class="update-card" id="add-engine-form" style="display:none">
+          <h3>موتور جدید</h3>
+          <div style="display:grid;gap:10px;margin-bottom:16px">
+            <div><label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:4px">نام موتور</label><input type="text" id="eng-name" placeholder="مثال: ClamAV-2" style="width:100%"></div>
+            <div><label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:4px">نوع</label>
+              <select id="eng-type" style="width:100%" onchange="toggleEngineFields()">
+                <option value="clamav">ClamAV Daemon</option>
+                <option value="yara">Yara Rules</option>
+                <option value="rest_api">REST API</option>
+                <option value="virustotal">VirusTotal</option>
+              </select>
+            </div>
+            <div id="eng-field-host"><label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:4px">Host</label><input type="text" id="eng-host" placeholder="مثال: clamav2" style="width:100%"></div>
+            <div id="eng-field-port"><label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:4px">Port</label><input type="number" id="eng-port" placeholder="3310" style="width:100%"></div>
+            <div id="eng-field-url" style="display:none"><label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:4px">URL</label><input type="text" id="eng-url" placeholder="http://av-server/scan" style="width:100%"></div>
+            <div id="eng-field-apikey" style="display:none"><label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:4px">API Key</label><input type="text" id="eng-apikey" placeholder="API Key" style="width:100%"></div>
+            <div><label style="font-size:12px;color:#94a3b8;display:block;margin-bottom:4px">توضیحات</label><input type="text" id="eng-desc" placeholder="توضیح اختیاری" style="width:100%"></div>
+          </div>
+          <button class="btn btn-success" id="btn-save-engine">ذخیره</button>
+          <button class="btn btn-danger" id="btn-cancel-engine">انصراف</button>
+          <div id="engine-result" class="result-msg"></div>
+        </div>
+      </div>
+    </div>
+    <div id="tab-update" style="display:none">
+      <div class="update-section">
+        <div class="update-card">
+          <h3>آپدیت ClamAV Signatures</h3>
+          <p style="font-size:12px;color:#94a3b8;margin-bottom:12px">فایل‌های .cvd یا .cld (main.cvd, daily.cvd, bytecode.cvd)</p>
+          <div class="upload-area" id="clamav-area">
+            <input type="file" id="clamav-file" accept=".cvd,.cld">
+            <div style="font-size:24px;margin-bottom:8px">📁</div>
+            <div style="font-size:13px">کلیک کنید برای انتخاب فایل</div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:4px">فرمت: .cvd یا .cld — حداکثر 200MB</div>
+          </div>
+          <div id="clamav-progress" style="display:none;font-size:12px;color:#94a3b8;padding:8px 0">در حال آپلود...</div>
+          <div id="clamav-result" class="result-msg"></div>
+          <p style="margin-top:12px;font-size:12px;color:#94a3b8">بعد از آپلود، ClamAV را restart کنید</p>
+        </div>
+        <div class="update-card">
+          <h3>مدیریت Yara Rules</h3>
+          <p style="font-size:12px;color:#94a3b8;margin-bottom:12px">فایل‌های .yar یا .yara</p>
+          <div class="upload-area" id="yara-zip-area" style="margin-bottom:12px">
+            <input type="file" id="yara-zip-file" accept=".zip">
+            <div style="font-size:24px;margin-bottom:8px">📦</div>
+            <div style="font-size:13px">آپلود ZIP (دسته‌ای)</div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:4px">فایل ZIP حاوی چندین .yar</div>
+          </div>
+          <div id="yara-zip-progress" style="display:none;font-size:12px;color:#94a3b8;padding:8px 0">در حال آپلود و بررسی rules...</div>
+          <div id="yara-zip-result" class="result-msg"></div>
+          <div class="upload-area" id="yara-area">
+            <input type="file" id="yara-file" accept=".yar,.yara">
+            <div style="font-size:24px;margin-bottom:8px">📋</div>
+            <div style="font-size:13px">کلیک کنید برای انتخاب فایل</div>
+          </div>
+          <div id="yara-progress" style="display:none;font-size:12px;color:#94a3b8;padding:8px 0">در حال آپلود...</div>
+          <div id="yara-result" class="result-msg"></div>
+          <div style="margin-top:16px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:13px">Rules موجود:</span>
+              <button class="btn btn-primary" id="btn-yara-list" style="font-size:11px;padding:4px 10px">بارگذاری</button>
+            </div>
+            <div id="yara-rules-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

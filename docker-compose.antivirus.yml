@@ -1,0 +1,122 @@
+name: nextcloud-antivirus
+
+networks:
+  av_net:
+    driver: bridge
+  nextcloud_backend:
+    external: true
+    name: nextcloud-enterprise_backend
+
+volumes:
+  dashboard_data:
+  clamav_db:
+  quarantine_data:
+  scan_tmp:
+  nextcloud_data:
+    external: true
+    name: nextcloud-enterprise_nextcloud_data
+
+services:
+
+  clamav:
+    image: clamav/clamav:1.4
+    container_name: clamav
+    restart: unless-stopped
+    environment:
+      - CLAMAV_NO_FRESHCLAMD=true
+    volumes:
+      - clamav_db:/var/lib/clamav
+      - ./av/clamav/clamd.conf:/etc/clamav/clamd.conf:ro
+      - scan_tmp:/scandir
+    networks:
+      - av_net
+      - nextcloud_backend
+    healthcheck:
+      test: ["CMD-SHELL", "clamdscan --no-summary /etc/hostname 2>&1 | grep -q OK || exit 1"]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+      start_period: 60s
+
+  cicap:
+    image: local/cicap:v2
+    container_name: cicap
+    restart: unless-stopped
+    ports:
+      - "1344:1344"
+    volumes:
+      - ./av/cicap/start.sh:/start.sh:ro
+      - quarantine_data:/quarantine
+      - scan_tmp:/scandir
+    networks:
+      - av_net
+      - nextcloud_backend
+    depends_on:
+      clamav:
+        condition: service_healthy
+    command: bash /start.sh
+
+  av_dashboard:
+    image: node:20-alpine
+    container_name: av_dashboard
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./av/dashboard:/app
+      - quarantine_data:/quarantine:ro
+      - dashboard_data:/data
+      - clamav_db:/clamav_db
+    environment:
+      - PORT=3000
+      - CLAMD_HOST=clamav
+      - CLAMD_PORT=3310
+      - QUARANTINE_PATH=/quarantine
+      - CLAMAV_DB_PATH=/clamav_db
+      - SCANNER_URL=http://av_scanner:8000
+      - DASHBOARD_USER=admin
+      - DASHBOARD_PASS=PMO@123456
+      - SCANNER_URL=http://av_scanner:8000
+    ports:
+      - "8090:3000"
+    command: sh -c "npm install --quiet && node server.js"
+    networks:
+      - av_net
+
+  log_collector:
+    image: python:3.12-alpine
+    container_name: av_log_collector
+    restart: unless-stopped
+    volumes:
+      - ./av/collector:/app
+      - nextcloud_data:/nextcloud:ro
+    environment:
+      - DASHBOARD_URL=http://av_dashboard:3000
+      - DASHBOARD_USER=admin
+      - DASHBOARD_PASS=PMO@123456
+      - SCANNER_URL=http://av_scanner:8000
+    command: sh -c "pip install requests --break-system-packages -q && python /app/collector.py"
+    networks:
+      - av_net
+
+  scanner:
+    image: local/scanner:v1
+    container_name: av_scanner
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+      - "3311:3311"
+    environment:
+      - CLAMD_HOST=clamav
+      - CLAMD_PORT=3310
+      - DASHBOARD_URL=http://av_dashboard:3000
+      - DASHBOARD_USER=admin
+      - DASHBOARD_PASS=PMO@123456
+      - SCANNER_URL=http://av_scanner:8000
+      - YARA_RULES_PATH=/app/rules
+      - VIRUSTOTAL_API_KEY=
+    networks:
+      - av_net
+      - nextcloud_backend
+    depends_on:
+      clamav:
+        condition: service_healthy
