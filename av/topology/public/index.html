@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nextcloud Topology</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Tahoma,Arial,sans-serif;background:#0f172a;color:#e2e8f0;direction:rtl;min-height:100vh}
+.header{background:#1e293b;padding:12px 20px;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.header h1{font-size:16px;color:#38bdf8}
+.controls{display:flex;align-items:center;gap:10px}
+#status-txt{font-size:13px}
+.btn{padding:5px 14px;background:#1d4ed8;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:12px 16px}
+.scard{background:#1e293b;border-radius:8px;padding:12px;border:1px solid #334155;text-align:center}
+.scard .num{font-size:24px;font-weight:bold}
+.scard .lbl{font-size:10px;color:#64748b;margin-top:2px}
+.green{color:#4ade80}.red{color:#f87171}.blue{color:#38bdf8}.yellow{color:#fbbf24}
+.topo-wrap{padding:12px 16px 20px}
+svg{width:100%;height:auto;display:block}
+@keyframes pulse{0%,100%{opacity:1;r:5}50%{opacity:.3;r:3.5}}
+@keyframes flow{to{stroke-dashoffset:-16}}
+.dot-ok{fill:#4ade80;animation:pulse 1.4s ease-in-out infinite}
+.dot-err{fill:#f87171}
+.link-ok{stroke:#4ade80;stroke-dasharray:6 4;animation:flow .9s linear infinite;fill:none}
+.link-err{stroke:#f87171;fill:none}
+.nbox-ok{opacity:1}
+.nbox-err{opacity:.5}
+.last-update{font-size:11px;color:#475569;padding:0 16px 12px;text-align:left}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Nextcloud Enterprise — نقشه زنده سرویس‌ها</h1>
+  <div class="controls">
+    <span id="status-txt" style="color:#4ade80">در حال بارگذاری...</span>
+    <button class="btn" onclick="fetchTopology()">بروزرسانی</button>
+  </div>
+</div>
+<div class="summary">
+  <div class="scard"><div class="num green" id="s-on">-</div><div class="lbl">آنلاین</div></div>
+  <div class="scard"><div class="num red" id="s-off">-</div><div class="lbl">آفلاین</div></div>
+  <div class="scard"><div class="num blue" id="s-tot">-</div><div class="lbl">کل</div></div>
+  <div class="scard"><div class="num yellow" id="s-pct">-</div><div class="lbl">درصد</div></div>
+</div>
+<div class="topo-wrap">
+<svg viewBox="0 0 900 680">
+<defs>
+  <marker id="aok" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#4ade80" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+  <marker id="aerr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <path d="M2 1L8 5L2 9" fill="none" stroke="#f87171" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+</defs>
+
+<!-- ─ Links ─ -->
+<g id="links" stroke-width="1.5">
+  <line id="lnk-u-ng"   x1="450" y1="44"  x2="450" y2="74"  class="link-ok" marker-end="url(#aok)"/>
+  <line id="lnk-ng-a1"  x1="360" y1="130" x2="150" y2="170" class="link-ok" marker-end="url(#aok)"/>
+  <line id="lnk-ng-a2"  x1="450" y1="130" x2="450" y2="170" class="link-ok" marker-end="url(#aok)"/>
+  <line id="lnk-ng-a3"  x1="540" y1="130" x2="750" y2="170" class="link-ok" marker-end="url(#aok)"/>
+  <line id="lnk-a-pgb"  x1="540" y1="226" x2="680" y2="266" class="link-ok" marker-end="url(#aok)"/>
+  <line id="lnk-a-red"  x1="360" y1="226" x2="200" y2="266" class="link-ok" marker-end="url(#aok)"/>
+  <line id="lnk-a-clam" x1="450" y1="226" x2="450" y2="346" class="link-ok" marker-end="url(#aok)"/>
+  <line id="lnk-pgb-pg" x1="720" y1="310" x2="720" y2="346" class="link-ok" marker-end="url(#aok)"/>
+  <line id="lnk-pg-r1"  x1="690" y1="402" x2="640" y2="440" class="link-ok" marker-end="url(#aok)"/>
+  <line id="lnk-pg-r2"  x1="750" y1="402" x2="800" y2="440" class="link-ok" marker-end="url(#aok)"/>
+  <line id="lnk-red-rr" x1="180" y1="312" x2="120" y2="346" class="link-ok" marker-end="url(#aok)"/>
+  <line id="lnk-cl-sc"  x1="450" y1="402" x2="450" y2="438" class="link-ok" marker-end="url(#aok)"/>
+</g>
+
+<!-- ─ Users ─ -->
+<g id="n-users" class="nbox-ok">
+  <rect x="330" y="14" width="240" height="36" rx="8" fill="#1e3a5f" stroke="#3b82f6" stroke-width="0.5"/>
+  <text x="450" y="32" text-anchor="middle" dominant-baseline="central" fill="#93c5fd" font-size="13" font-weight="500">کاربران — HTTPS :443</text>
+</g>
+<circle id="d-users" cx="562" cy="32" r="5" class="dot-ok"/>
+
+<!-- ─ Nginx ─ -->
+<g id="n-nginx" class="nbox-ok">
+  <rect x="290" y="74" width="320" height="44" rx="8" fill="#1e3a5f" stroke="#3b82f6" stroke-width="0.5"/>
+  <text x="450" y="90" text-anchor="middle" dominant-baseline="central" fill="#93c5fd" font-size="13" font-weight="500">Nginx 1.27 — Reverse Proxy</text>
+  <text x="450" y="108" text-anchor="middle" dominant-baseline="central" fill="#60a5fa" font-size="11">SSL · Rate Limit · Load Balancer</text>
+</g>
+<circle id="d-nginx" cx="602" cy="96" r="5" class="dot-ok"/>
+
+<!-- ─ App Nodes ─ -->
+<g id="n-app1" class="nbox-ok">
+  <rect x="60" y="170" width="180" height="44" rx="8" fill="#14532d" stroke="#22c55e" stroke-width="0.5"/>
+  <text x="150" y="186" text-anchor="middle" dominant-baseline="central" fill="#86efac" font-size="13" font-weight="500">App Node 1</text>
+  <text x="150" y="204" text-anchor="middle" dominant-baseline="central" fill="#4ade80" font-size="11">Nextcloud 30 · FPM</text>
+</g>
+<circle id="d-app1" cx="232" cy="192" r="5" class="dot-ok"/>
+
+<g id="n-app2" class="nbox-ok">
+  <rect x="360" y="170" width="180" height="44" rx="8" fill="#14532d" stroke="#22c55e" stroke-width="0.5"/>
+  <text x="450" y="186" text-anchor="middle" dominant-baseline="central" fill="#86efac" font-size="13" font-weight="500">App Node 2</text>
+  <text x="450" y="204" text-anchor="middle" dominant-baseline="central" fill="#4ade80" font-size="11">Nextcloud 30 · FPM</text>
+</g>
+<circle id="d-app2" cx="532" cy="192" r="5" class="dot-ok"/>
+
+<g id="n-app3" class="nbox-ok">
+  <rect x="660" y="170" width="180" height="44" rx="8" fill="#14532d" stroke="#22c55e" stroke-width="0.5"/>
+  <text x="750" y="186" text-anchor="middle" dominant-baseline="central" fill="#86efac" font-size="13" font-weight="500">App Node 3</text>
+  <text x="750" y="204" text-anchor="middle" dominant-baseline="central" fill="#4ade80" font-size="11">Nextcloud 30 · FPM</text>
+</g>
+<circle id="d-app3" cx="832" cy="192" r="5" class="dot-ok"/>
+
+<!-- ─ PgBouncer ─ -->
+<g id="n-pgBouncer" class="nbox-ok">
+  <rect x="610" y="266" width="220" height="44" rx="8" fill="#312e81" stroke="#818cf8" stroke-width="0.5"/>
+  <text x="720" y="282" text-anchor="middle" dominant-baseline="central" fill="#c4b5fd" font-size="13" font-weight="500">PgBouncer</text>
+  <text x="720" y="300" text-anchor="middle" dominant-baseline="central" fill="#a78bfa" font-size="11">Connection Pool</text>
+</g>
+<circle id="d-pgBouncer" cx="822" cy="288" r="5" class="dot-ok"/>
+
+<!-- ─ PostgreSQL Primary ─ -->
+<g id="n-pgPrimary" class="nbox-ok">
+  <rect x="610" y="346" width="220" height="44" rx="8" fill="#312e81" stroke="#818cf8" stroke-width="0.5"/>
+  <text x="720" y="362" text-anchor="middle" dominant-baseline="central" fill="#c4b5fd" font-size="13" font-weight="500">PostgreSQL Primary</text>
+  <text x="720" y="380" text-anchor="middle" dominant-baseline="central" fill="#a78bfa" font-size="11">WAL Streaming · Replica x2</text>
+</g>
+<circle id="d-pgPrimary" cx="822" cy="368" r="5" class="dot-ok"/>
+
+<!-- PG Replicas -->
+<g id="n-pgReplica1" class="nbox-ok">
+  <rect x="565" y="438" width="120" height="34" rx="6" fill="#1e1b4b" stroke="#6366f1" stroke-width="0.5"/>
+  <text x="625" y="455" text-anchor="middle" dominant-baseline="central" fill="#a5b4fc" font-size="12">PG Replica 1</text>
+</g>
+<circle id="d-pgReplica1" cx="677" cy="455" r="4" class="dot-ok"/>
+
+<g id="n-pgReplica2" class="nbox-ok">
+  <rect x="740" y="438" width="120" height="34" rx="6" fill="#1e1b4b" stroke="#6366f1" stroke-width="0.5"/>
+  <text x="800" y="455" text-anchor="middle" dominant-baseline="central" fill="#a5b4fc" font-size="12">PG Replica 2</text>
+</g>
+<circle id="d-pgReplica2" cx="852" cy="455" r="4" class="dot-ok"/>
+
+<!-- ─ Redis Master ─ -->
+<g id="n-redisMaster" class="nbox-ok">
+  <rect x="90" y="266" width="220" height="44" rx="8" fill="#451a03" stroke="#f97316" stroke-width="0.5"/>
+  <text x="200" y="282" text-anchor="middle" dominant-baseline="central" fill="#fdba74" font-size="13" font-weight="500">Redis Master + HA</text>
+  <text x="200" y="300" text-anchor="middle" dominant-baseline="central" fill="#fb923c" font-size="11">Sentinel x3 · Replica x2</text>
+</g>
+<circle id="d-redisMaster" cx="302" cy="288" r="5" class="dot-ok"/>
+
+<!-- Redis Replicas -->
+<g id="n-redisRep1" class="nbox-ok">
+  <rect x="60" y="346" width="130" height="34" rx="6" fill="#431407" stroke="#f97316" stroke-width="0.5"/>
+  <text x="125" y="363" text-anchor="middle" dominant-baseline="central" fill="#fdba74" font-size="12">Redis Replica x2</text>
+</g>
+<circle id="d-redisRep1" cx="182" cy="363" r="4" class="dot-ok"/>
+
+<!-- ─ ClamAV / Multi-AV ─ -->
+<g id="n-clamav" class="nbox-ok">
+  <rect x="330" y="346" width="240" height="44" rx="8" fill="#450a0a" stroke="#f87171" stroke-width="0.5"/>
+  <text x="450" y="362" text-anchor="middle" dominant-baseline="central" fill="#fca5a5" font-size="13" font-weight="500">ClamAV + Yara Scanner</text>
+  <text x="450" y="380" text-anchor="middle" dominant-baseline="central" fill="#f87171" font-size="11">Multi-AV Proxy :3311</text>
+</g>
+<circle id="d-clamav" cx="562" cy="368" r="5" class="dot-ok"/>
+
+<!-- AV Dashboard -->
+<g id="n-avDashboard" class="nbox-ok">
+  <rect x="330" y="438" width="240" height="34" rx="6" fill="#431407" stroke="#f97316" stroke-width="0.5"/>
+  <text x="450" y="455" text-anchor="middle" dominant-baseline="central" fill="#fdba74" font-size="12">AV Dashboard :8090</text>
+</g>
+<circle id="d-avDashboard" cx="562" cy="455" r="4" class="dot-ok"/>
+<line x1="450" y1="390" x2="450" y2="438" stroke="#f97316" stroke-width="1" stroke-dasharray="4 3" fill="none"/>
+
+<!-- ─ Monitoring Bar ─ -->
+<rect x="50" y="510" width="800" height="60" rx="10" fill="none" stroke="#334155" stroke-dasharray="6 4" stroke-width="0.8"/>
+<text x="450" y="524" text-anchor="middle" fill="#475569" font-size="11">مانیتورینگ</text>
+
+<g id="n-prometheus" class="nbox-ok">
+  <rect x="70" y="530" width="140" height="30" rx="6" fill="#1e293b" stroke="#475569" stroke-width="0.5"/>
+  <text x="140" y="545" text-anchor="middle" dominant-baseline="central" fill="#94a3b8" font-size="12">Prometheus :9090</text>
+</g>
+<circle id="d-prometheus" cx="202" cy="545" r="4" class="dot-ok"/>
+
+<g id="n-grafana" class="nbox-ok">
+  <rect x="225" y="530" width="130" height="30" rx="6" fill="#1e293b" stroke="#475569" stroke-width="0.5"/>
+  <text x="290" y="545" text-anchor="middle" dominant-baseline="central" fill="#94a3b8" font-size="12">Grafana :3000</text>
+</g>
+<circle id="d-grafana" cx="347" cy="545" r="4" class="dot-ok"/>
+
+<g id="n-cadvisor" class="nbox-ok">
+  <rect x="370" y="530" width="130" height="30" rx="6" fill="#1e293b" stroke="#475569" stroke-width="0.5"/>
+  <text x="435" y="545" text-anchor="middle" dominant-baseline="central" fill="#94a3b8" font-size="12">cAdvisor :8080</text>
+</g>
+<circle id="d-cadvisor" cx="492" cy="545" r="4" class="dot-ok"/>
+
+<g id="n-avCollector" class="nbox-ok">
+  <rect x="515" y="530" width="130" height="30" rx="6" fill="#1e293b" stroke="#475569" stroke-width="0.5"/>
+  <text x="580" y="545" text-anchor="middle" dominant-baseline="central" fill="#94a3b8" font-size="12">Log Collector</text>
+</g>
+<circle id="d-avCollector" cx="637" cy="545" r="4" class="dot-ok"/>
+
+<g id="n-sentinel1" class="nbox-ok">
+  <rect x="660" y="530" width="170" height="30" rx="6" fill="#1e293b" stroke="#475569" stroke-width="0.5"/>
+  <text x="745" y="545" text-anchor="middle" dominant-baseline="central" fill="#94a3b8" font-size="12">Redis Sentinels x3</text>
+</g>
+<circle id="d-sentinel1" cx="822" cy="545" r="4" class="dot-ok"/>
+
+<!-- Legend -->
+<g transform="translate(50,595)">
+  <circle cx="8" cy="8" r="5" class="dot-ok"/>
+  <text x="18" y="12" fill="#64748b" font-size="11">آنلاین</text>
+  <circle cx="80" cy="8" r="5" class="dot-err"/>
+  <text x="90" y="12" fill="#64748b" font-size="11">آفلاین</text>
+  <line x1="150" y1="8" x2="185" y2="8" stroke="#4ade80" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="190" y="12" fill="#64748b" font-size="11">ارتباط فعال</text>
+  <line x1="290" y1="8" x2="325" y2="8" stroke="#f87171" stroke-width="1.5"/>
+  <text x="330" y="12" fill="#64748b" font-size="11">ارتباط قطع</text>
+</g>
+</svg>
+</div>
+<div class="last-update" id="last-update">آخرین بروزرسانی: -</div>
+
+<script>
+var nodeLinks = {
+  nginx:      ['lnk-u-ng','lnk-ng-a1','lnk-ng-a2','lnk-ng-a3'],
+  app1:       ['lnk-ng-a1'],
+  app2:       ['lnk-ng-a2','lnk-a-pgb','lnk-a-red','lnk-a-clam'],
+  app3:       ['lnk-ng-a3'],
+  pgBouncer:  ['lnk-a-pgb','lnk-pgb-pg'],
+  pgPrimary:  ['lnk-pgb-pg','lnk-pg-r1','lnk-pg-r2'],
+  pgReplica1: ['lnk-pg-r1'],
+  pgReplica2: ['lnk-pg-r2'],
+  redisMaster:['lnk-a-red','lnk-red-rr'],
+  redisRep1:  ['lnk-red-rr'],
+  clamav:     ['lnk-a-clam','lnk-cl-sc'],
+  avScanner:  ['lnk-cl-sc'],
+};
+
+function setLink(id, ok) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.className.baseVal = ok ? 'link-ok' : 'link-err';
+  el.setAttribute('marker-end', ok ? 'url(#aok)' : 'url(#aerr)');
+}
+
+function setNode(key, ok) {
+  var dot = document.getElementById('d-' + key);
+  var box = document.getElementById('n-' + key);
+  if (dot) dot.className.baseVal = ok ? 'dot-ok' : 'dot-err';
+  if (box) box.className.baseVal = ok ? 'nbox-ok' : 'nbox-err';
+  if (!ok && nodeLinks[key]) {
+    nodeLinks[key].forEach(function(lid) { setLink(lid, false); });
+  }
+}
+
+function render(data) {
+  var nodes = data.nodes;
+
+  document.querySelectorAll('#links line').forEach(function(l) {
+    l.className.baseVal = 'link-ok';
+    l.setAttribute('marker-end', 'url(#aok)');
+  });
+
+  Object.keys(nodes).forEach(function(key) { setNode(key, nodes[key].ok); });
+
+  var on = data.summary.online;
+  var off = data.summary.offline;
+  var tot = data.summary.total;
+  document.getElementById('s-on').textContent = on;
+  document.getElementById('s-off').textContent = off;
+  document.getElementById('s-tot').textContent = tot;
+  document.getElementById('s-pct').textContent = Math.round(on/tot*100) + '%';
+
+  var st = document.getElementById('status-txt');
+  st.style.color = off > 0 ? '#f87171' : '#4ade80';
+  st.textContent = off > 0 ? off + ' سرویس آفلاین' : 'همه سرویس‌ها آنلاین';
+  document.getElementById('last-update').textContent = 'آخرین بروزرسانی: ' + new Date().toLocaleString('fa-IR');
+}
+
+function fetchTopology() {
+  fetch('/api/topology').then(function(r){ return r.json(); }).then(render).catch(function(e){ console.error(e); });
+}
+
+fetchTopology();
+setInterval(fetchTopology, 10000);
+</script>
+</body>
+</html>

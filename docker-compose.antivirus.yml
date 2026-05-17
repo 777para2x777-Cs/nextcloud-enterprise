@@ -38,23 +38,6 @@ services:
       retries: 5
       start_period: 60s
 
-  cicap:
-    image: local/cicap:v2
-    container_name: cicap
-    restart: unless-stopped
-    ports:
-      - "1344:1344"
-    volumes:
-      - ./av/cicap/start.sh:/start.sh:ro
-      - quarantine_data:/quarantine
-      - scan_tmp:/scandir
-    networks:
-      - av_net
-      - nextcloud_backend
-    depends_on:
-      clamav:
-        condition: service_healthy
-    command: bash /start.sh
 
   av_dashboard:
     image: node:20-alpine
@@ -120,3 +103,22 @@ services:
     depends_on:
       clamav:
         condition: service_healthy
+
+  topology:
+    image: node:20-alpine
+    container_name: av_topology
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./av/topology:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - PORT=3002
+      - DASHBOARD_USER=admin
+      - DASHBOARD_PASS=PMO@123456
+    ports:
+      - "3002:3002"
+    command: sh -c "npm install --quiet && node server.js"
+    networks:
+      - av_net
+      - nextcloud_backend
