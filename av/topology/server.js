@@ -149,3 +149,20 @@ app.get('/api/topology', async (req, res) => {
 app.get('/health', (req, res) => res.json({ ok: true }));
 app.use(express.static('public'));
 app.listen(PORT, () => console.log('Topology API on port ' + PORT));
+
+// تعریف tier برای هر container
+const TIERS = {
+  'nc_nginx': 1,
+  'nc_app1': 2, 'nc_app2': 2, 'nc_app3': 2,
+  'nc_redis_master': 3, 'nc_pgbouncer': 3, 'clamav': 3,
+  'nc_redis_replica1': 4, 'nc_redis_replica2': 4,
+  'nc_sentinel1': 4, 'nc_sentinel2': 4, 'nc_sentinel3': 4,
+  'nc_pg_primary': 4, 'av_scanner': 4,
+  'nc_pg_replica1': 5, 'nc_pg_replica2': 5,
+  'av_dashboard': 5, 'av_log_collector': 5,
+  'nc_prometheus': 6, 'nc_grafana': 6, 'nc_cadvisor': 6,
+  'nc_nginx_exporter': 6, 'nc_pg_exporter': 6, 'nc_redis_exporter': 6,
+  'nc_cron': 6, 'av_topology': 6,
+};
+
+app.get('/api/tiers', (req, res) => res.json(TIERS));
