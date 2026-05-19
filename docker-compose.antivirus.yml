@@ -72,6 +72,7 @@ services:
     volumes:
       - ./av/collector:/app
       - nextcloud_data:/nextcloud:ro
+      - dashboard_data:/data
     environment:
       - DASHBOARD_URL=http://av_dashboard:3000
       - DASHBOARD_USER=admin
