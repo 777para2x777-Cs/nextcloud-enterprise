@@ -294,7 +294,7 @@ services:
     restart: unless-stopped
     command: redis-sentinel /etc/redis/sentinel.conf
     volumes:
-      - ./conf/redis/sentinel.conf:/etc/redis/sentinel.conf
+      - /data/docker/sentinel/sentinel1:/etc/redis
     networks:
       - backend
     depends_on:
@@ -308,7 +308,7 @@ services:
     restart: unless-stopped
     command: redis-sentinel /etc/redis/sentinel.conf
     volumes:
-      - ./conf/redis/sentinel.conf:/etc/redis/sentinel.conf
+      - /data/docker/sentinel/sentinel2:/etc/redis
     networks:
       - backend
     depends_on:
@@ -320,7 +320,7 @@ services:
     restart: unless-stopped
     command: redis-sentinel /etc/redis/sentinel.conf
     volumes:
-      - ./conf/redis/sentinel.conf:/etc/redis/sentinel.conf
+      - /data/docker/sentinel/sentinel3:/etc/redis
     networks:
       - backend
     depends_on:

@@ -1,0 +1,7 @@
+port 26379
+sentinel monitor nc_master redis_master 6379 2
+sentinel auth-pass nc_master PMO@123456
+sentinel down-after-milliseconds nc_master 5000
+sentinel parallel-syncs nc_master 1
+sentinel failover-timeout nc_master 60000
+sentinel resolve-hostnames yes
