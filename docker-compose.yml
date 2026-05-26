@@ -519,3 +519,31 @@ services:
       - "127.0.0.1:8080:8080"
     networks:
       - backend
+
+  nc_archdash:
+    image: node:20-alpine
+    container_name: nc_archdash
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm install && node server.js"
+    volumes:
+      - /root/nextcloud/av/archdash:/app
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+      - PROMETHEUS_URL=http://nc_prometheus:9090
+    networks:
+      - backend
+    depends_on:
+      - prometheus
+
+  nc_redis_proxy:
+    image: haproxy:2.8-alpine
+    container_name: nc_redis_proxy
+    restart: unless-stopped
+    volumes:
+      - /root/nextcloud/conf/haproxy/redis.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    networks:
+      - backend

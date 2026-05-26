@@ -1,0 +1,68 @@
+
+[1m═══ 1. SYSTEM ═══[0m
+[0;34m[INFO][0m Uptime: up 52 minutes
+[0;32m[PASS][0m هیچ systemd unit ای failed نیست
+
+[1m═══ 2. DOCKER ═══[0m
+[0;32m[PASS][0m Docker service فعال است
+[0;34m[INFO][0m Containers: 26/26 running
+[0;32m[PASS][0m هیچ container ای exited/restarting نیست
+
+[1m═══ 3. NGINX ═══[0m
+[0;32m[PASS][0m Nginx config معتبر است
+[0;32m[PASS][0m Nginx HTTP → 301
+[0;32m[PASS][0m Nginx HTTPS → 302
+
+[1m═══ 4. NEXTCLOUD APP NODES ═══[0m
+[0;32m[PASS][0m nc_app1 → healthy
+[0;32m[PASS][0m nc_app2 → healthy
+[0;32m[PASS][0m nc_app3 → healthy
+
+[1m═══ 5. POSTGRESQL ═══[0m
+[0;32m[PASS][0m PostgreSQL Primary → accepting connections
+[0;32m[PASS][0m PostgreSQL replication → 2/2 replica streaming
+[0;34m[INFO][0m   replica 172.21.0.10 → streaming/async
+[0;34m[INFO][0m   replica 172.21.0.12 → streaming/async
+[0;32m[PASS][0m nc_pg_replica1 → running
+[0;32m[PASS][0m nc_pg_replica2 → running
+
+[1m═══ 6. PGBOUNCER ═══[0m
+[0;32m[PASS][0m PgBouncer → Nextcloud از host 'pgbouncer' استفاده می‌کند
+[0;32m[PASS][0m PgBouncer → DB connection از Nextcloud سالم
+
+[1m═══ 7. REDIS ═══[0m
+[0;32m[PASS][0m Redis Master → PONG
+[0;32m[PASS][0m Redis replication → 2/2 slave متصل
+[0;32m[PASS][0m nc_redis_replica1 → slave OK
+[0;32m[PASS][0m nc_redis_replica2 → slave OK
+[0;32m[PASS][0m nc_sentinel1 → master: nc_master
+[0;32m[PASS][0m nc_sentinel2 → master: nc_master
+[0;32m[PASS][0m nc_sentinel3 → master: nc_master
+
+[1m═══ 8. ANTIVIRUS (ClamAV + Yara) ═══[0m
+[0;32m[PASS][0m ClamAV → healthy
+[0;32m[PASS][0m AV Scanner :8000 → Multi-AV Scanner v2.0.0
+[0;32m[PASS][0m AV Dashboard :8090 → 200 OK
+
+[1m═══ 9. TOPOLOGY MONITOR ═══[0m
+[0;32m[PASS][0m Topology Monitor (av_topology) → running
+
+[1m═══ 10. MONITORING (Prometheus + Grafana) ═══[0m
+[0;32m[PASS][0m Prometheus :9090 → healthy
+[0;32m[PASS][0m Grafana :3000 → healthy
+
+[1m═══ 11. PERSISTENT DATA ═══[0m
+[0;32m[PASS][0m collector_pos.txt → 83573946
+[0;32m[PASS][0m scan_history.json موجود است
+
+[1m═══ 12. DISK & MEMORY ═══[0m
+[0;32m[PASS][0m Disk / → 26G/48G (56% used)
+[0;32m[PASS][0m Disk /data → 7.2G/196G (4% used)
+[0;34m[INFO][0m Memory: 2.5Gi/15Gi (16% used)
+
+[1m═══ 📊 نتیجه نهایی ═══[0m
+
+  [0;32mPASS: 32[0m  |  [0;31mFAIL: 0[0m  |  [1;33mWARN: 0[0m  |  Total: 32
+
+[0;32m[1m✅ همه چیز سالم است — پروژه آماده production است![0m
+

@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nextcloud Enterprise — Architecture</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Tahoma,Arial,sans-serif;background:#0f172a;color:#e2e8f0;direction:rtl;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:#1e293b;padding:10px 16px;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.topbar h1{font-size:14px;color:#38bdf8;font-weight:500}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.summary{display:flex;gap:8px}
+.scard{background:#0f172a;border:1px solid #334155;border-radius:6px;padding:6px 14px;text-align:center}
+.scard .num{font-size:18px;font-weight:bold}
+.scard .lbl{font-size:10px;color:#64748b}
+.green{color:#4ade80}.red{color:#f87171}.blue{color:#38bdf8}.yellow{color:#fbbf24}
+.btn{padding:5px 12px;background:#1d4ed8;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit}
+.btn:hover{background:#1e40af}
+.btn-sm{padding:3px 10px;font-size:11px}
+.btn-red{background:#7f1d1d}.btn-red:hover{background:#991b1b}
+.btn-green{background:#14532d}.btn-green:hover{background:#166534}
+.main{display:flex;flex:1;overflow:hidden}
+.diagram-area{flex:1;overflow:auto;padding:12px;position:relative}
+.panel{width:0;overflow:hidden;transition:width .28s ease;background:#1e293b;border-right:1px solid #334155;display:flex;flex-direction:column}
+.panel.open{width:340px}
+.panel-header{padding:14px 16px 10px;border-bottom:1px solid #334155;flex-shrink:0}
+.panel-header h2{font-size:14px;font-weight:500;color:#e2e8f0;margin-bottom:2px}
+.panel-header .psub{font-size:12px;color:#64748b}
+.panel-header-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.close-btn{background:none;border:none;color:#64748b;cursor:pointer;font-size:20px;line-height:1;padding:0}
+.close-btn:hover{color:#e2e8f0}
+.panel-body{flex:1;overflow-y:auto;padding:14px 16px}
+.panel-footer{padding:10px 16px;border-top:1px solid #334155;flex-shrink:0}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:4px;margin:0 3px 5px 0;font-weight:500}
+.badge-green{background:#14532d;color:#4ade80}
+.badge-blue{background:#1e3a5f;color:#93c5fd}
+.badge-yellow{background:#451a03;color:#fbbf24}
+.badge-red{background:#450a0a;color:#f87171}
+.section-label{font-size:10px;color:#475569;margin:12px 0 6px;text-transform:uppercase;letter-spacing:.06em;font-weight:500}
+.info-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:5px 0;border-bottom:1px solid #1e293b}
+.info-row .lbl{color:#64748b}
+.info-row .val{color:#e2e8f0;font-weight:500;text-align:left;max-width:200px;word-break:break-all}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-left:6px}
+.dot-ok{background:#4ade80;box-shadow:0 0 6px #4ade8088}
+.dot-err{background:#f87171}
+.flow-box{background:#0f172a;border-radius:6px;padding:10px 12px;font-size:11px;font-family:monospace;color:#94a3b8;line-height:1.9;margin:6px 0;white-space:pre-wrap;border:1px solid #1e3a5f}
+.desc-area{width:100%;background:#0f172a;border:1px solid #334155;border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:12px;font-family:Tahoma,Arial,sans-serif;resize:vertical;min-height:70px;direction:rtl}
+.desc-area:focus{outline:none;border-color:#3b82f6}
+.flow-area{width:100%;background:#0f172a;border:1px solid #334155;border-radius:6px;padding:8px 10px;color:#94a3b8;font-size:11px;font-family:monospace;resize:vertical;min-height:60px;direction:ltr}
+.flow-area:focus{outline:none;border-color:#3b82f6}
+.save-msg{font-size:11px;color:#4ade80;margin-right:8px;opacity:0;transition:opacity .3s}
+.save-msg.show{opacity:1}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes flow{to{stroke-dashoffset:-16}}
+.dot-anim{animation:pulse 1.4s ease-in-out infinite}
+.lnk-anim{stroke-dasharray:6 4;animation:flow .9s linear infinite;fill:none}
+.nc-node{cursor:pointer;transition:opacity .15s}
+.nc-node:hover{opacity:.82}
+.nc-node.selected rect{stroke-width:2!important}
+.last-update{font-size:10px;color:#475569}
+.diag-check{display:flex;align-items:center;gap:6px;font-size:12px;color:#94a3b8;padding:3px 0}
+.diag-check::before{content:"";width:6px;height:6px;border-radius:50%;background:#f97316;flex-shrink:0}
+.cmd-btn{display:flex;justify-content:space-between;align-items:center;width:100%;background:#0f172a;border:1px solid #334155;border-radius:6px;padding:7px 10px;margin:4px 0;cursor:pointer;font-family:Tahoma,Arial,sans-serif;color:#e2e8f0;font-size:12px;text-align:right;transition:border-color .15s}
+.cmd-btn:hover{border-color:#3b82f6}
+.cmd-btn .cmd-label{color:#e2e8f0}
+.cmd-btn .cmd-run{font-size:10px;color:#3b82f6;white-space:nowrap;margin-right:8px}
+.output-box{background:#000;border:1px solid #1e3a5f;border-radius:6px;padding:10px;font-size:11px;font-family:monospace;color:#4ade80;line-height:1.7;margin-top:6px;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto;direction:ltr}
+.output-box.err{color:#f87171}
+.diag-result{border-radius:6px;padding:10px 12px;margin:6px 0;border-right:3px solid}
+.diag-result.critical{background:#450a0a;border-color:#f87171}
+.diag-result.warning{background:#451a03;border-color:#f97316}
+.diag-result.info{background:#1e293b;border-color:#475569}
+.diag-result .dr-title{font-size:13px;font-weight:500;margin-bottom:4px}
+.diag-result.critical .dr-title{color:#f87171}
+.diag-result.warning .dr-title{color:#fbbf24}
+.diag-result.info .dr-title{color:#94a3b8}
+.diag-result .dr-reason{font-size:11px;color:#94a3b8;margin-bottom:4px}
+.diag-result .dr-suggest{font-size:11px;color:#4ade80}
+.diag-result .dr-cmds{margin-top:6px}
+.diag-running{font-size:12px;color:#f97316;padding:8px 0}
+.rem-btn{width:100%;padding:10px;background:#1d4ed8;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-family:Tahoma,Arial,sans-serif;font-weight:500;margin:10px 0 4px;transition:background .2s}
+.rem-btn:hover{background:#1e40af}
+.rem-btn:disabled{background:#334155;color:#64748b;cursor:not-allowed}
+.rem-btn.danger{background:#7f1d1d}.rem-btn.danger:hover{background:#991b1b}
+.rem-step{font-size:11px;padding:4px 0;border-bottom:1px solid #1e293b;font-family:monospace;direction:ltr}
+.rem-step .ts{color:#475569;margin-left:8px}
+.rem-result{border-radius:8px;padding:12px;margin:8px 0}
+.rem-result.success{background:#14532d;border:1px solid #22c55e}
+.rem-result.fail{background:#450a0a;border:1px solid #f87171}
+.rem-result.manual{background:#451a03;border:1px solid #f97316}
+.rem-result .rt{font-size:13px;font-weight:500;margin-bottom:6px}
+.rem-result.success .rt{color:#4ade80}
+.rem-result.fail .rt{color:#f87171}
+.rem-result.manual .rt{color:#fbbf24}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{display:inline-block;width:10px;height:10px;border:2px solid #f97316;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;margin-left:6px;vertical-align:middle}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Nextcloud Enterprise — Architecture Dashboard</h1>
+  <div class="topbar-right">
+    <div class="summary">
+      <div class="scard"><div class="num yellow" id="s-pct">-</div><div class="lbl">درصد</div></div>
+      <div class="scard"><div class="num blue" id="s-tot">-</div><div class="lbl">کل</div></div>
+      <div class="scard"><div class="num red" id="s-off">-</div><div class="lbl">آفلاین</div></div>
+      <div class="scard"><div class="num green" id="s-on">-</div><div class="lbl">آنلاین</div></div>
+    </div>
+    <span class="last-update" id="last-update">-</span>
+    <button class="btn btn-sm" onclick="fetchAll()">↻ آپدیت</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="panel" id="panel">
+    <div class="panel-header">
+      <div class="panel-header-top">
+        <div>
+          <h2 id="p-title">-</h2>
+          <div class="psub" id="p-sub">-</div>
+        </div>
+        <button class="close-btn" onclick="closePanel()">×</button>
+      </div>
+      <div id="p-badges"></div>
+    </div>
+    <div class="panel-body">
+      <div class="section-label">وضعیت live</div>
+      <div id="p-live-rows"></div>
+
+      <div class="section-label">جریان داده</div>
+      <div class="flow-box" id="p-flow-display"></div>
+
+      <div class="section-label">توضیحات</div>
+      <textarea class="desc-area" id="p-desc" rows="4" placeholder="توضیحات این component..."></textarea>
+
+      <div id="p-diag"></div>
+      <div class="section-label" style="margin-top:10px">جریان داده (ویرایش)</div>
+      <textarea class="flow-area" id="p-flow" rows="4" placeholder="A → B → C"></textarea>
+    </div>
+    <div class="panel-footer" style="display:flex;align-items:center;justify-content:flex-end">
+      <span class="save-msg" id="save-msg">ذخیره شد ✓</span>
+      <button class="btn btn-green btn-sm" onclick="saveDesc()">ذخیره</button>
+    </div>
+  </div>
+
+  <div class="diagram-area" id="diagram-area">
+    <svg id="topo-svg" width="100%" style="min-width:900px" viewBox="0 0 1100 820"></svg>
+  </div>
+</div>
+
+<script>
+var nodes = {};
+var descs = {};
+var selectedKey = null;
+var autoTimer = setInterval(fetchAll, 15000);
+var diags = {};
+
+// ═══════════════════════════════════════
+// رنگ‌بندی گروه‌ها
+// ═══════════════════════════════════════
+var GCOLORS = {
+  loadbalancer: { fill:'#1e3a5f', stroke:'#3b82f6', text:'#93c5fd', sub:'#60a5fa' },
+  app:          { fill:'#14532d', stroke:'#22c55e', text:'#86efac', sub:'#4ade80' },
+  database:     { fill:'#312e81', stroke:'#818cf8', text:'#c4b5fd', sub:'#a78bfa' },
+  cache:        { fill:'#451a03', stroke:'#f97316', text:'#fdba74', sub:'#fb923c' },
+  antivirus:    { fill:'#450a0a', stroke:'#f87171', text:'#fca5a5', sub:'#f87171' },
+  monitoring:   { fill:'#1e293b', stroke:'#475569', text:'#94a3b8', sub:'#64748b' },
+  other:        { fill:'#1e293b', stroke:'#475569', text:'#94a3b8', sub:'#64748b' },
+};
+
+// ═══════════════════════════════════════
+// تعریف topology: node‌ها و ارتباطات
+// ═══════════════════════════════════════
+var LAYOUT = [
+  { key:'users',            x:390, y:20,  w:220, h:40, group:'loadbalancer', label:'کاربران',       sub:'HTTPS :443 · cltpmo.ir', virtual:true },
+  { key:'nc_nginx',         x:390, y:100, w:220, h:40, group:'loadbalancer', label:'nginx',          sub:'SSL · LB · :443' },
+  { key:'nc_app1',          x:80,  y:200, w:200, h:40, group:'app',          label:'app1',           sub:'Nextcloud 30 FPM' },
+  { key:'nc_app2',          x:400, y:200, w:200, h:40, group:'app',          label:'app2',           sub:'Nextcloud 30 FPM' },
+  { key:'nc_app3',          x:720, y:200, w:200, h:40, group:'app',          label:'app3',           sub:'Nextcloud 30 FPM' },
+  { key:'nc_pgbouncer',     x:80,  y:310, w:200, h:40, group:'database',     label:'pgbouncer',      sub:'connection pool' },
+  { key:'nc_redis_master',  x:430, y:310, w:200, h:40, group:'cache',        label:'redis master',   sub:'cache · :6379' },
+  { key:'av_scanner',       x:760, y:310, w:200, h:40, group:'antivirus',    label:'av scanner',     sub:'ClamAV + Yara' },
+  { key:'nc_pg_primary',    x:80,  y:410, w:200, h:40, group:'database',     label:'pg primary',     sub:'write · pg v16' },
+  { key:'nc_redis_replica1',x:350, y:410, w:180, h:40, group:'cache',        label:'redis replica1', sub:':6379' },
+  { key:'nc_redis_replica2',x:550, y:410, w:180, h:40, group:'cache',        label:'redis replica2', sub:':6379' },
+  { key:'av_dashboard',     x:750, y:410, w:150, h:40, group:'antivirus',    label:'av dashboard',   sub:':8090' },
+  { key:'av_log_collector', x:920, y:410, w:150, h:40, group:'antivirus',    label:'av collector',   sub:'logs' },
+  { key:'nc_pg_replica1',   x:40,  y:510, w:170, h:40, group:'database',     label:'pg replica1',    sub:'streaming' },
+  { key:'nc_pg_replica2',   x:230, y:510, w:170, h:40, group:'database',     label:'pg replica2',    sub:'streaming' },
+  { key:'nc_sentinel1',     x:430, y:510, w:130, h:40, group:'cache',        label:'sentinel1',      sub:':26379' },
+  { key:'nc_sentinel2',     x:575, y:510, w:130, h:40, group:'cache',        label:'sentinel2',      sub:':26379' },
+  { key:'nc_sentinel3',     x:720, y:510, w:130, h:40, group:'cache',        label:'sentinel3',      sub:':26379' },
+  { key:'clamav',           x:870, y:510, w:130, h:40, group:'antivirus',    label:'clamav',         sub:'engine' },
+  { key:'nc_prometheus',    x:40,  y:610, w:130, h:40, group:'monitoring',   label:'prometheus',     sub:':9090' },
+  { key:'nc_grafana',       x:185, y:610, w:110, h:40, group:'monitoring',   label:'grafana',        sub:':3000' },
+  { key:'nc_cadvisor',      x:310, y:610, w:110, h:40, group:'monitoring',   label:'cadvisor',       sub:':8080' },
+  { key:'nc_pg_exporter',   x:435, y:610, w:130, h:40, group:'monitoring',   label:'pg exporter',    sub:':9187' },
+  { key:'nc_redis_exporter',x:580, y:610, w:140, h:40, group:'monitoring',   label:'redis exporter', sub:':9121' },
+  { key:'nc_nginx_exporter',x:735, y:610, w:140, h:40, group:'monitoring',   label:'nginx exporter', sub:':9113' },
+  { key:'nc_cron',          x:890, y:610, w:90,  h:40, group:'other',        label:'cron',           sub:'5min' },
+  { key:'av_topology',      x:40,  y:700, w:170, h:40, group:'other',        label:'av topology',    sub:':3002' },
+];
+
+var LINKS = [
+  { from:'users',            to:'nc_nginx',         color:'#4ade80' },
+  { from:'nc_nginx',         to:'nc_app1',          color:'#4ade80' },
+  { from:'nc_nginx',         to:'nc_app2',          color:'#4ade80' },
+  { from:'nc_nginx',         to:'nc_app3',          color:'#4ade80' },
+  { from:'nc_app1',          to:'nc_pgbouncer',     color:'#4ade80' },
+  { from:'nc_app2',          to:'nc_pgbouncer',     color:'#4ade80' },
+  { from:'nc_app3',          to:'nc_pgbouncer',     color:'#4ade80' },
+  { from:'nc_app1',          to:'nc_redis_master',  color:'#f97316' },
+  { from:'nc_app2',          to:'nc_redis_master',  color:'#f97316' },
+  { from:'nc_app3',          to:'nc_redis_master',  color:'#f97316' },
+  { from:'nc_app3',          to:'av_scanner',       color:'#f87171' },
+  { from:'nc_pgbouncer',     to:'nc_pg_primary',    color:'#818cf8' },
+  { from:'nc_redis_master',  to:'nc_redis_replica1',color:'#f97316' },
+  { from:'nc_redis_master',  to:'nc_redis_replica2',color:'#f97316' },
+  { from:'av_scanner',       to:'av_dashboard',     color:'#f87171' },
+  { from:'av_scanner',       to:'av_log_collector', color:'#f87171' },
+  { from:'av_scanner',       to:'clamav',           color:'#f87171' },
+  { from:'nc_pg_primary',    to:'nc_pg_replica1',   color:'#818cf8' },
+  { from:'nc_pg_primary',    to:'nc_pg_replica2',   color:'#818cf8' },
+  { from:'nc_redis_replica1',to:'nc_sentinel1',     color:'#f97316', dash:true },
+  { from:'nc_redis_replica2',to:'nc_sentinel2',     color:'#f97316', dash:true },
+  { from:'nc_redis_replica2',to:'nc_sentinel3',     color:'#f97316', dash:true },
+];
+
+// ═══════════════════════════════════════
+// رسم SVG
+// ═══════════════════════════════════════
+function nodeCenter(key){
+  var n=LAYOUT.find(function(l){return l.key===key;});
+  if(!n) return null;
+  return {x:n.x+n.w/2, y:n.y+n.h/2};
+}
+
+function buildSVG(){
+  var svg=document.getElementById('topo-svg');
+  svg.innerHTML='';
+
+  // defs
+  svg.innerHTML='<defs>'
+    +'<marker id="aok" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#4ade80" stroke-width="1.5" stroke-linecap="round"/></marker>'
+    +'<marker id="adb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#818cf8" stroke-width="1.5" stroke-linecap="round"/></marker>'
+    +'<marker id="acache" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#f97316" stroke-width="1.5" stroke-linecap="round"/></marker>'
+    +'<marker id="aav" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#f87171" stroke-width="1.5" stroke-linecap="round"/></marker>'
+    +'</defs>';
+
+  function markerFor(color){
+    if(color==='#4ade80') return 'url(#aok)';
+    if(color==='#818cf8') return 'url(#adb)';
+    if(color==='#f97316') return 'url(#acache)';
+    return 'url(#aav)';
+  }
+
+  // خطوط
+  LINKS.forEach(function(lnk){
+    var f=nodeCenter(lnk.from), t=nodeCenter(lnk.to);
+    if(!f||!t) return;
+    var nf=LAYOUT.find(function(l){return l.key===lnk.from;});
+    var nt=LAYOUT.find(function(l){return l.key===lnk.to;});
+    // از پایین from به بالای to
+    var x1=f.x, y1=nf.y+nf.h, x2=t.x, y2=nt.y;
+    var el=document.createElementNS('http://www.w3.org/2000/svg','path');
+    var cy=(y1+y2)/2;
+    el.setAttribute('d','M'+x1+' '+y1+' C'+x1+' '+cy+' '+x2+' '+cy+' '+x2+' '+y2);
+    el.setAttribute('stroke',lnk.color);
+    el.setAttribute('stroke-width','1.3');
+    el.setAttribute('fill','none');
+    el.setAttribute('marker-end',markerFor(lnk.color));
+    el.setAttribute('class','lnk-anim');
+    if(lnk.dash) el.style.strokeDasharray='4 4';
+    svg.appendChild(el);
+  });
+
+  // node‌ها
+  LAYOUT.forEach(function(n){
+    var gc=GCOLORS[n.group]||GCOLORS.other;
+    var nd=nodes[n.key];
+    var isOk=n.virtual ? true : (nd ? nd.ok : null);
+    var isSelected=(selectedKey===n.key);
+
+    var g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('class','nc-node'+(isSelected?' selected':''));
+    g.setAttribute('data-key',n.key);
+    g.style.cursor='pointer';
+
+    // rect
+    var rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rect.setAttribute('x',n.x); rect.setAttribute('y',n.y);
+    rect.setAttribute('width',n.w); rect.setAttribute('height',n.h);
+    rect.setAttribute('rx','7');
+    rect.setAttribute('fill',gc.fill);
+    rect.setAttribute('stroke',isOk===false?'#f87171':isSelected?'#fff':gc.stroke);
+    rect.setAttribute('stroke-width',isSelected?'2':'0.6');
+    rect.setAttribute('opacity',isOk===false?'0.5':'1');
+    g.appendChild(rect);
+
+    // label
+    var tx=document.createElementNS('http://www.w3.org/2000/svg','text');
+    tx.setAttribute('x',n.x+n.w/2); tx.setAttribute('y',n.y+14);
+    tx.setAttribute('text-anchor','middle');
+    tx.setAttribute('dominant-baseline','central');
+    tx.setAttribute('fill',gc.text);
+    tx.setAttribute('font-size','12');
+    tx.setAttribute('font-weight','500');
+    tx.textContent=n.label;
+    g.appendChild(tx);
+
+    // sub
+    var ts=document.createElementNS('http://www.w3.org/2000/svg','text');
+    ts.setAttribute('x',n.x+n.w/2); ts.setAttribute('y',n.y+28);
+    ts.setAttribute('text-anchor','middle');
+    ts.setAttribute('dominant-baseline','central');
+    ts.setAttribute('fill',gc.sub);
+    ts.setAttribute('font-size','10');
+    ts.textContent=n.sub;
+    g.appendChild(ts);
+
+    // status dot
+    if(!n.virtual){
+      var dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      dot.setAttribute('cx',n.x+n.w-8); dot.setAttribute('cy',n.y+8); dot.setAttribute('r','4');
+      dot.setAttribute('fill',isOk===false?'#f87171':'#4ade80');
+      if(isOk!==false) dot.setAttribute('class','dot-anim');
+      g.appendChild(dot);
+    }
+
+    g.addEventListener('click',function(){ selectNode(n.key); });
+    svg.appendChild(g);
+  });
+}
+
+// ═══════════════════════════════════════
+// پنل جزئیات
+// ═══════════════════════════════════════
+function selectNode(key){
+  selectedKey=key;
+  buildSVG();
+
+  var layout=LAYOUT.find(function(l){return l.key===key;});
+  var nd=nodes[key];
+  var desc=descs[key]||{};
+  var gc=GCOLORS[layout?layout.group:'other']||GCOLORS.other;
+
+  document.getElementById('p-title').textContent=desc.title||(layout?layout.label:key);
+  document.getElementById('p-sub').textContent=desc.subtitle||(layout?layout.sub:'');
+
+  // badges
+  var badges='';
+  if(nd){
+    badges+='<span class="badge '+(nd.ok?'badge-green':'badge-red')+'">'+(nd.ok?'آنلاین':'آفلاین')+'</span>';
+    if(nd.healthy!==undefined) badges+='<span class="badge badge-blue">'+(nd.healthy?'healthy':'unhealthy')+'</span>';
+  } else if(layout&&layout.virtual){
+    badges+='<span class="badge badge-green">active</span>';
+  }
+  document.getElementById('p-badges').innerHTML=badges;
+
+  // live rows
+  var rows='';
+  if(nd){
+    rows+='<div class="info-row"><span class="lbl">وضعیت</span><span class="val">'+(nd.ok?'✓ آنلاین':'✗ آفلاین')+'</span></div>';
+    rows+='<div class="info-row"><span class="lbl">Status</span><span class="val">'+nd.status+'</span></div>';
+    rows+='<div class="info-row"><span class="lbl">Image</span><span class="val">'+nd.image+'</span></div>';
+    rows+='<div class="info-row"><span class="lbl">Group</span><span class="val">'+nd.group+'</span></div>';
+  } else {
+    rows+='<div class="info-row"><span class="lbl">نوع</span><span class="val">Virtual node</span></div>';
+  }
+  document.getElementById('p-live-rows').innerHTML=rows;
+
+  // توضیحات
+  document.getElementById('p-flow-display').textContent=desc.flow||'—';
+  document.getElementById('p-desc').value=desc.details||'';
+  document.getElementById('p-flow').value=desc.flow||'';
+
+  var dg=diags[key];
+  var diagHtml='';
+  if(dg && dg.commands){
+    var isOffline = nd && !nd.ok;
+    if(isOffline){
+      diagHtml+='<div class="section-label" style="color:#f97316;margin-top:14px">⚠ راهنمای عیب‌یابی</div>';
+      dg.commands.filter(function(c){return c.check;}).forEach(function(c){
+        var safeCmd=c.cmd.replace(/\\\\/g,'\\\\\\\\').replace(/'/g,"\\\'");
+        diagHtml+='<div style="margin:4px 0">'
+          +'<div class="diag-check">'+c.check+'</div>'
+          +'<button class="cmd-btn" style="margin-right:14px" onclick="runCmd(this,\''+safeCmd+'\')">'
+          +'<span class="cmd-label" style="color:#94a3b8;font-size:11px">'+c.label+'</span>'
+          +'<span class="cmd-run">▶ اجرا</span>'
+          +'</button>'
+          +'</div>';
+      });
+    }
+    diagHtml+='<div class="section-label" style="margin-top:14px">دستورات سریع</div>';
+    dg.commands.filter(function(c){return !c.check || !isOffline;}).forEach(function(c){
+      var safeCmd=c.cmd.replace(/\\\\/g,'\\\\\\\\').replace(/'/g,"\\\'");
+      diagHtml+='<button class="cmd-btn" onclick="runCmd(this,\''+safeCmd+'\')">'
+        +'<span class="cmd-label">'+c.label+'</span>'
+        +'<span class="cmd-run">▶ اجرا</span>'
+        +'</button>';
+    });
+  }
+  if(nd && !nd.ok){
+    autoDiagnose(key);
+  } else {
+    document.getElementById('p-diag').innerHTML=diagHtml;
+  }
+  document.getElementById('panel').classList.add('open');
+}
+
+function autoRemediate(btnEl){
+  var key = btnEl._key;
+  var diagnosis = btnEl._diag || [];
+  var btn = btnEl;
+  btn.disabled = true;
+  btn.textContent = 'در حال اصلاح...';
+  var resDiv = btn.nextElementSibling;
+  clearInterval(autoTimer);
+
+  var stepsHtml = '';
+  resDiv.innerHTML = '<div class="rem-result info" id="rem-live-'+key+'">'
+    + '<div class="rt" style="color:#38bdf8"><span class="spinner"></span> در حال اجرا...</div>'
+    + '<div id="rem-steps-'+key+'" style="max-height:220px;overflow-y:auto;margin-top:8px"></div>'
+    + '</div>';
+
+  var stepsDiv = document.getElementById('rem-steps-'+key);
+  var diagParam = encodeURIComponent(JSON.stringify(diagnosis||[]));
+  var url = '/api/remediate-stream/'+encodeURIComponent(key)+'?diag='+diagParam;
+  console.log('SSE connecting:', url);
+  var es = new EventSource(url);
+  es.onopen = function(){ console.log('SSE connected'); };
+
+  es.onmessage = function(e){
+    var data = JSON.parse(e.data);
+
+    if(data.type === 'step'){
+      var t = data.time ? data.time.slice(11,19) : '';
+      var icon = '';
+      if(data.msg.startsWith('✓')) icon = 'ok';
+      else if(data.msg.startsWith('✗')) icon = 'err';
+      else if(data.msg.startsWith('⚠')) icon = 'warn';
+      var color = icon==='ok'?'#4ade80': icon==='err'?'#f87171': icon==='warn'?'#fbbf24':'#94a3b8';
+      stepsDiv.innerHTML += '<div class="rem-step" style="color:'+color+'">'
+        +'<span class="ts">'+t+'</span>'+data.msg+'</div>';
+      stepsDiv.scrollTop = stepsDiv.scrollHeight;
+    }
+
+    if(data.type === 'done'){
+      es.close();
+      var cls = data.manual ? 'manual' : (data.success ? 'success' : 'fail');
+      var icon2 = data.manual ? '⚠' : (data.success ? '✓' : '✗');
+      var lastDiag = window['_lastDiag_'+key] || [];
+      var rootCause = lastDiag.length > 0 ? lastDiag[0].title : null;
+      var title = data.manual ? 'اقدام دستی لازم است'
+        : (data.success
+            ? (rootCause ? 'رفع شد: ' + rootCause : 'اصلاح موفق بود')
+            : (rootCause ? 'ناموفق — علت: ' + rootCause : 'اصلاح ناموفق'));
+      var liveBox = document.getElementById('rem-live-'+key);
+      if(liveBox){
+        liveBox.className = 'rem-result '+cls;
+        var rt = liveBox.querySelector('.rt');
+        rt.innerHTML = icon2+' '+title;
+        if(data.warning){
+          rt.insertAdjacentHTML('afterend',
+            '<div style="font-size:11px;color:#fbbf24;margin:4px 0">⚠ '+data.warning+'</div>');
+        }
+        var confirmDiv = document.createElement('div');
+        confirmDiv.style.cssText = 'margin-top:10px;text-align:center';
+        confirmDiv.innerHTML = '<button onclick="this.parentNode.parentNode.remove()" '
+          +'style="padding:5px 20px;background:#334155;color:#e2e8f0;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-family:Tahoma">'
+          +'بستن ✕</button>';
+        liveBox.appendChild(confirmDiv);
+      }
+      btn.disabled = false;
+      btn.textContent = '↻ اجرای مجدد';
+      if(data.success){
+        setTimeout(function(){
+          var savedKey = selectedKey;
+          fetchAll();
+          selectedKey = null;
+          autoTimer = setInterval(fetchAll, 15000);
+        }, 3000);
+      } else {
+        autoTimer = setInterval(fetchAll, 15000);
+      }
+    }
+
+    if(data.type === 'error'){
+      es.close();
+      resDiv.innerHTML = '<div class="rem-result fail"><div class="rt">✗ خطا: '+data.msg+'</div></div>';
+      btn.disabled = false;
+      btn.textContent = '↻ اجرای مجدد';
+    }
+  };
+
+  es.onerror = function(){
+    es.close();
+    btn.disabled = false;
+    btn.textContent = '↻ اجرای مجدد';
+    autoTimer = setInterval(fetchAll, 15000);
+  };
+}
+
+function autoDiagnose(key){
+  var diagDiv=document.getElementById('p-diag');
+  diagDiv.innerHTML='<div class="diag-running"><span class="spinner"></span> در حال تحلیل خودکار...</div>';
+  fetch('/api/diagnose',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({container:key})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(!d.results||!d.results.length){
+      diagDiv.innerHTML='<div class="diag-running">نتیجه‌ای یافت نشد</div>';
+      return;
+    }
+    var diagResults = d.results;
+    window['_lastDiag_'+key] = diagResults;
+    var html='<div class="section-label" style="color:#f97316;margin-top:0">⚡ تشخیص خودکار</div>';
+    d.results.forEach(function(r){
+      html+='<div class="diag-result '+r.level+'">';
+      html+='<div class="dr-title">'+r.title+'</div>';
+      if(r.reason) html+='<div class="dr-reason">علت: '+r.reason+'</div>';
+      if(r.suggestion) html+='<div class="dr-suggest">→ '+r.suggestion+'</div>';
+      if(r.commands&&r.commands.length){
+        html+='<div class="dr-cmds">';
+        r.commands.forEach(function(cmd){
+          var safe=cmd.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+          html+='<button class="cmd-btn" style="margin-top:4px" onclick="runCmd(this,\''+safe+'\')">'
+            +'<span class="cmd-label" style="font-size:11px;font-family:monospace;color:#64748b">'+cmd.substring(0,55)+(cmd.length>55?"...":"")+'</span>'
+            +'<span class="cmd-run">▶</span>'
+            +'</button>';
+        });
+        html+='</div>';
+      }
+      html+='</div>';
+    });
+    html += '<button class="rem-btn" id="rem-btn-'+key+'" onclick="autoRemediate(this)">⚡ اصلاح خودکار</button>';
+    html += '<div id="rem-result-'+key+'"></div>';
+    diagDiv.innerHTML=html;
+  document.getElementById('rem-btn-'+key) && (document.getElementById('rem-btn-'+key)._key=key) && (document.getElementById('rem-btn-'+key)._diag=diagResults);
+  }).catch(function(e){
+    diagDiv.innerHTML='<div class="diag-running" style="color:#f87171">خطا: '+e.message+'</div>';
+  });
+}
+
+function runCmd(btn,cmd){
+  var ex=btn.nextElementSibling;
+  if(ex&&ex.classList.contains('output-box')) ex.remove();
+  var out=document.createElement('div');
+  out.className='output-box';
+  out.textContent='در حال اجرا...';
+  btn.parentNode.insertBefore(out,btn.nextSibling);
+  btn.disabled=true;
+  fetch('/api/exec',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cmd:cmd})})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      out.textContent=d.output||d.error||'(بدون خروجی)';
+      if(d.error) out.classList.add('err');
+      btn.disabled=false;
+    }).catch(function(e){
+      out.textContent='خطا: '+e.message;
+      out.classList.add('err');
+      btn.disabled=false;
+    });
+}
+
+function closePanel(){
+  document.getElementById('panel').classList.remove('open');
+  selectedKey=null;
+  buildSVG();
+}
+
+// ═══════════════════════════════════════
+// ذخیره توضیحات
+// ═══════════════════════════════════════
+function saveDesc(){
+  if(!selectedKey) return;
+  var layout=LAYOUT.find(function(l){return l.key===selectedKey;});
+  var desc=descs[selectedKey]||{};
+  desc.title=document.getElementById('p-title').textContent;
+  desc.subtitle=document.getElementById('p-sub').textContent;
+  desc.details=document.getElementById('p-desc').value;
+  desc.flow=document.getElementById('p-flow').value;
+  descs[selectedKey]=desc;
+
+  // آپدیت display
+  document.getElementById('p-flow-display').textContent=desc.flow||'—';
+
+  fetch('/api/descriptions/'+selectedKey,{
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(desc)
+  }).then(function(){
+    var msg=document.getElementById('save-msg');
+    msg.classList.add('show');
+    setTimeout(function(){msg.classList.remove('show');},2000);
+  });
+}
+
+// ═══════════════════════════════════════
+// fetch داده‌ها
+// ═══════════════════════════════════════
+function fetchAll(){
+  Promise.all([
+    fetch('/api/status').then(function(r){return r.json();}),
+    fetch('/api/descriptions').then(function(r){return r.json();}),
+    fetch('/api/diagnostics').then(function(r){return r.json();})
+  ]).then(function(results){
+    var status=results[0], d=results[1];
+    diags=results[2]||{};
+    nodes=status.nodes||{};
+    descs=d||{};
+
+    var on=status.summary.online, off=status.summary.offline, tot=status.summary.total;
+    document.getElementById('s-on').textContent=on;
+    document.getElementById('s-off').textContent=off;
+    document.getElementById('s-tot').textContent=tot;
+    document.getElementById('s-pct').textContent=Math.round(on/tot*100)+'%';
+    document.getElementById('last-update').textContent='آپدیت: '+new Date().toLocaleTimeString('fa-IR');
+
+    buildSVG();
+  }).catch(function(e){console.error(e);});
+}
+
+fetchAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+{
+  "users": {
+    "title": "کاربران",
+    "subtitle": "ورودی ترافیک به سیستم",
+    "details": "تمام ترافیک از طریق Nginx عبور می‌کند. کاربران مستقیماً به App nodes دسترسی ندارند.",
+    "flow": "Browser → DNS → 192.168.10.147:443\n→ Nginx SSL termination\n→ Nextcloud App"
+  },
+  "nc_nginx": {
+    "title": "Nginx 1.27",
+    "subtitle": "Load Balancer · Reverse Proxy",
+    "details": "فایل‌های static را مستقیم serve می‌کند. PHP requests را به FPM می‌فرستد. SSL را terminate می‌کند.",
+    "flow": "Client → :443 → SSL decrypt\n→ upstream nc_app1:9000\n→ upstream nc_app2:9000\n→ upstream nc_app3:9000"
+  },
+  "nc_app1": {
+    "title": "App Node 1",
+    "subtitle": "Nextcloud 30 PHP-FPM",
+    "details": "یکی از سه node اجرایی Nextcloud. هر node یک shared volume دارد و به PgBouncer و Redis متصل است.",
+    "flow": "Nginx → FPM :9000\n→ PgBouncer (DB)\n→ Redis (cache/session)\n→ AV Scanner (upload)"
+  },
+  "nc_app2": {
+    "title": "App Node 2",
+    "subtitle": "Nextcloud 30 PHP-FPM",
+    "details": "یکی از سه node اجرایی Nextcloud. هر node یک shared volume دارد و به PgBouncer و Redis متصل است.",
+    "flow": "Nginx → FPM :9000\n→ PgBouncer (DB)\n→ Redis (cache/session)\n→ AV Scanner (upload)"
+  },
+  "nc_app3": {
+    "title": "App Node 3",
+    "subtitle": "Nextcloud 30 PHP-FPM",
+    "details": "یکی از سه node اجرایی Nextcloud. هر node یک shared volume دارد و به PgBouncer و Redis متصل است.",
+    "flow": "Nginx → FPM :9000\n→ PgBouncer (DB)\n→ Redis (cache/session)\n→ AV Scanner (upload)"
+  },
+  "nc_pgbouncer": {
+    "title": "PgBouncer",
+    "subtitle": "Connection Pooling",
+    "details": "بدون PgBouncer هر PHP request یک اتصال جدید به Postgres باز می‌کند. PgBouncer اتصالات را pool می‌کند و مصرف حافظه را کاهش می‌دهد.",
+    "flow": "nc_app1/2/3 → PgBouncer :5432\n→ pg_primary :5432\n(connection reuse)"
+  },
+  "nc_pg_primary": {
+    "title": "PostgreSQL Primary",
+    "subtitle": "Main Database - Write",
+    "details": "Primary تنها node‌ای است که write می‌پذیرد. Replication کاملاً async است. Failover دستی نیاز دارد.",
+    "flow": "PgBouncer → pg_primary :5432\npg_primary → WAL stream\n→ pg_replica1\n→ pg_replica2"
+  },
+  "nc_pg_replica1": {
+    "title": "PG Replica 1",
+    "subtitle": "Read-only Standby",
+    "details": "Replica streaming از primary دریافت می‌کند. در صورت failure primary، به صورت دستی promote می‌شود.",
+    "flow": "pg_primary WAL →\n→ pg_replica1 (apply changes)"
+  },
+  "nc_pg_replica2": {
+    "title": "PG Replica 2",
+    "subtitle": "Read-only Standby",
+    "details": "Replica streaming از primary دریافت می‌کند. در صورت failure primary، به صورت دستی promote می‌شود.",
+    "flow": "pg_primary WAL →\n→ pg_replica2 (apply changes)"
+  },
+  "nc_redis_master": {
+    "title": "Redis Master",
+    "subtitle": "Cache · Session · Queue",
+    "details": "Redis برای file locking، session storage، و cache استفاده می‌شود. بدون Redis، Nextcloud در multi-node کار نمی‌کند.",
+    "flow": "App → Redis Master :6379\nMaster → Replica1 (async)\nMaster → Replica2 (async)"
+  },
+  "nc_redis_replica1": {
+    "title": "Redis Replica 1",
+    "subtitle": "Cache Standby",
+    "details": "Replica از master sync می‌شود. در صورت failure master، sentinel آن را promote می‌کند.",
+    "flow": "Redis Master → replica1 (async sync)"
+  },
+  "nc_redis_replica2": {
+    "title": "Redis Replica 2",
+    "subtitle": "Cache Standby",
+    "details": "Replica از master sync می‌شود. در صورت failure master، sentinel آن را promote می‌کند.",
+    "flow": "Redis Master → replica2 (async sync)"
+  },
+  "nc_sentinel1": {
+    "title": "Redis Sentinel 1",
+    "subtitle": "HA Watchdog",
+    "details": "Sentinel هر ۵ ثانیه master را ping می‌کند. با quorum=2 تصمیم failover می‌گیرد.",
+    "flow": "Sentinel ping → master (5s)\n2/3 agree down → promote replica"
+  },
+  "nc_sentinel2": {
+    "title": "Redis Sentinel 2",
+    "subtitle": "HA Watchdog",
+    "details": "Sentinel هر ۵ ثانیه master را ping می‌کند. با quorum=2 تصمیم failover می‌گیرد.",
+    "flow": "Sentinel ping → master (5s)\n2/3 agree down → promote replica"
+  },
+  "nc_sentinel3": {
+    "title": "Redis Sentinel 3",
+    "subtitle": "HA Watchdog",
+    "details": "Sentinel هر ۵ ثانیه master را ping می‌کند. با quorum=2 تصمیم failover می‌گیرد.",
+    "flow": "Sentinel ping → master (5s)\n2/3 agree down → promote replica"
+  },
+  "clamav": {
+    "title": "ClamAV",
+    "subtitle": "Antivirus Engine",
+    "details": "ClamAV فایل‌های آپلود شده را اسکن می‌کند. DB باید به‌روز باشد. freshclam را دوره‌ای اجرا کنید.",
+    "flow": "av_scanner → ClamAV :3310\n→ scan result → Nextcloud"
+  },
+  "av_scanner": {
+    "title": "AV Scanner",
+    "subtitle": "ClamAV + Yara API",
+    "details": "API یکپارچه برای اسکن فایل‌ها با ClamAV و Yara. Nextcloud از طریق این API فایل‌ها را اسکن می‌کند.",
+    "flow": "File upload → nc_app\n→ av_scanner :8000\n→ ClamAV + Yara scan\n→ result → Nextcloud"
+  },
+  "av_dashboard": {
+    "title": "AV Dashboard",
+    "subtitle": "مانیتورینگ آنتی‌ویروس",
+    "details": "داشبورد نمایش نتایج اسکن، تاریخچه، و وضعیت سرویس‌های AV. auth با admin/PMO@123456.",
+    "flow": "av_log_collector → scan_history.json\n→ av_dashboard :8090 → UI"
+  },
+  "av_log_collector": {
+    "title": "AV Log Collector",
+    "subtitle": "جمع‌آوری لاگ اسکن",
+    "details": "لاگ‌های اسکن را جمع‌آوری و parse می‌کند. موقعیت آخرین لاگ را در collector_pos.txt ذخیره می‌کند.",
+    "flow": "av_scanner logs →\nav_log_collector parse\n→ scan_history.json → dashboard"
+  },
+  "nc_prometheus": {
+    "title": "Prometheus",
+    "subtitle": "Metrics Database",
+    "details": "متریک‌ها را از exporterها هر ۱۵ ثانیه scrape می‌کند. روی 127.0.0.1:9090 bind است.",
+    "flow": "cAdvisor + exporters → metrics\n→ Prometheus scrape (15s)\n→ store time-series"
+  },
+  "nc_grafana": {
+    "title": "Grafana",
+    "subtitle": "Dashboard & Visualization",
+    "details": "داشبوردهای visual از داده‌های Prometheus. روی 127.0.0.1:3000 bind است.",
+    "flow": "Prometheus → Grafana query\n→ dashboard render"
+  },
+  "nc_cadvisor": {
+    "title": "cAdvisor",
+    "subtitle": "Container Metrics",
+    "details": "متریک‌های resource usage همه container‌ها را جمع‌آوری می‌کند.",
+    "flow": "Docker API → cAdvisor\n→ container metrics → Prometheus"
+  },
+  "nc_nginx_exporter": {
+    "title": "Nginx Exporter",
+    "subtitle": "Nginx Metrics",
+    "details": "متریک‌های Nginx را برای Prometheus export می‌کند.",
+    "flow": "Nginx stub_status → exporter :9113 → Prometheus"
+  },
+  "nc_pg_exporter": {
+    "title": "PG Exporter",
+    "subtitle": "PostgreSQL Metrics",
+    "details": "متریک‌های PostgreSQL را برای Prometheus export می‌کند.",
+    "flow": "pg_primary → exporter :9187 → Prometheus"
+  },
+  "nc_redis_exporter": {
+    "title": "Redis Exporter",
+    "subtitle": "Redis Metrics",
+    "details": "متریک‌های Redis را برای Prometheus export می‌کند.",
+    "flow": "Redis Master → exporter :9121 → Prometheus"
+  },
+  "av_topology": {
+    "title": "Topology Monitor",
+    "subtitle": "نقشه زنده سرویس‌ها",
+    "details": "نقشه زنده همه سرویس‌ها از Docker API و Prometheus. هر ۱۰ ثانیه آپدیت می‌شود.",
+    "flow": "Docker API + Prometheus\n→ topology server :3002\n→ SVG map (browser)"
+  },
+  "nc_cron": {
+    "title": "Nextcloud Cron",
+    "subtitle": "Background Jobs",
+    "details": "Background jobهای Nextcloud را اجرا می‌کند. هر ۵ دقیقه اجرا می‌شود.",
+    "flow": "cron (5min) → php occ\n→ background tasks"
+  }
+}

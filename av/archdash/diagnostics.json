@@ -1,0 +1,736 @@
+{
+  "nc_nginx": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_nginx --format='{{.State.Status}} | health: {{.State.Health.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "تست nginx config",
+        "cmd": "docker exec nc_nginx nginx -t",
+        "check": "تست config file"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_nginx --tail 50",
+        "check": "بررسی upstream app nodes"
+      },
+      {
+        "label": "بررسی port 80/443",
+        "cmd": "ss -tlnp | grep -E ':80|:443'",
+        "check": "بررسی port 80/443"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_nginx",
+        "check": null
+      }
+    ]
+  },
+  "nc_app1": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_app1 --format='{{.State.Status}} | health: {{.State.Health.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_app1 --tail 50",
+        "check": "بررسی php-fpm"
+      },
+      {
+        "label": "وضعیت Nextcloud",
+        "cmd": "docker exec nc_app1 php occ status",
+        "check": "چک کردن Nextcloud config"
+      },
+      {
+        "label": "اتصال DB",
+        "cmd": "docker exec nc_app1 php occ db:add-missing-indices --dry-run",
+        "check": "اتصال به PgBouncer"
+      },
+      {
+        "label": "اتصال Redis",
+        "cmd": "docker exec nc_app1 php occ config:system:get redis host",
+        "check": "اتصال به Redis"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_app1",
+        "check": null
+      }
+    ]
+  },
+  "nc_app2": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_app2 --format='{{.State.Status}} | health: {{.State.Health.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_app2 --tail 50",
+        "check": "بررسی php-fpm"
+      },
+      {
+        "label": "وضعیت Nextcloud",
+        "cmd": "docker exec nc_app2 php occ status",
+        "check": "چک کردن Nextcloud config"
+      },
+      {
+        "label": "اتصال DB",
+        "cmd": "docker exec nc_app2 php occ db:add-missing-indices --dry-run",
+        "check": "اتصال به PgBouncer"
+      },
+      {
+        "label": "اتصال Redis",
+        "cmd": "docker exec nc_app2 php occ config:system:get redis host",
+        "check": "اتصال به Redis"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_app2",
+        "check": null
+      }
+    ]
+  },
+  "nc_app3": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_app3 --format='{{.State.Status}} | health: {{.State.Health.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_app3 --tail 50",
+        "check": "بررسی php-fpm"
+      },
+      {
+        "label": "وضعیت Nextcloud",
+        "cmd": "docker exec nc_app3 php occ status",
+        "check": "چک کردن Nextcloud config"
+      },
+      {
+        "label": "اتصال DB",
+        "cmd": "docker exec nc_app3 php occ db:add-missing-indices --dry-run",
+        "check": "اتصال به PgBouncer"
+      },
+      {
+        "label": "اتصال Redis",
+        "cmd": "docker exec nc_app3 php occ config:system:get redis host",
+        "check": "اتصال به Redis"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_app3",
+        "check": null
+      }
+    ]
+  },
+  "nc_pgbouncer": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_pgbouncer --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "نمایش pool‌ها",
+        "cmd": "docker exec nc_pgbouncer psql -h localhost -p 5432 -U pgbouncer -d pgbouncer -c 'SHOW POOLS;'",
+        "check": "بررسی pool‌ها"
+      },
+      {
+        "label": "آمار اتصالات",
+        "cmd": "docker exec nc_pgbouncer psql -h localhost -p 5432 -U pgbouncer -d pgbouncer -c 'SHOW STATS;'",
+        "check": "بررسی max connections"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_pgbouncer --tail 50",
+        "check": "چک credentials"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_pgbouncer",
+        "check": null
+      }
+    ]
+  },
+  "nc_pg_primary": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_pg_primary --format='{{.State.Status}} | health: {{.State.Health.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "آماده بودن DB",
+        "cmd": "docker exec nc_pg_primary pg_isready -U nextcloud -d nextcloud",
+        "check": "آماده بودن PostgreSQL"
+      },
+      {
+        "label": "وضعیت replication",
+        "cmd": "docker exec nc_pg_primary psql -U nextcloud -d nextcloud -c 'SELECT client_addr,state,sync_state FROM pg_stat_replication;'",
+        "check": "بررسی replication"
+      },
+      {
+        "label": "تعداد connections",
+        "cmd": "docker exec nc_pg_primary psql -U nextcloud -d nextcloud -c 'SELECT count(*) FROM pg_stat_activity;'",
+        "check": "بررسی connections"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_pg_primary --tail 50",
+        "check": "چک کردن disk space"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_pg_primary",
+        "check": null
+      }
+    ]
+  },
+  "nc_pg_replica1": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_pg_replica1 --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "وضعیت recovery",
+        "cmd": "docker exec nc_pg_replica1 psql -U nextcloud -d nextcloud -tAc 'SELECT pg_is_in_recovery();'",
+        "check": "چک کردن recovery mode"
+      },
+      {
+        "label": "replication lag",
+        "cmd": "docker exec nc_pg_replica1 psql -U nextcloud -d nextcloud -tAc 'SELECT now()-pg_last_xact_replay_timestamp() AS lag;'",
+        "check": "بررسی replication lag"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_pg_replica1 --tail 50",
+        "check": "اتصال به primary"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_pg_replica1",
+        "check": null
+      }
+    ]
+  },
+  "nc_pg_replica2": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_pg_replica2 --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "وضعیت recovery",
+        "cmd": "docker exec nc_pg_replica2 psql -U nextcloud -d nextcloud -tAc 'SELECT pg_is_in_recovery();'",
+        "check": "چک کردن recovery mode"
+      },
+      {
+        "label": "replication lag",
+        "cmd": "docker exec nc_pg_replica2 psql -U nextcloud -d nextcloud -tAc 'SELECT now()-pg_last_xact_replay_timestamp() AS lag;'",
+        "check": "بررسی replication lag"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_pg_replica2 --tail 50",
+        "check": "اتصال به primary"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_pg_replica2",
+        "check": null
+      }
+    ]
+  },
+  "nc_redis_master": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_redis_master --format='{{.State.Status}} | health: {{.State.Health.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "تست PING",
+        "cmd": "docker exec nc_redis_master redis-cli -a PMO@123456 ping",
+        "check": "تست PING"
+      },
+      {
+        "label": "وضعیت replication",
+        "cmd": "docker exec nc_redis_master redis-cli -a PMO@123456 info replication",
+        "check": "بررسی replication"
+      },
+      {
+        "label": "مصرف memory",
+        "cmd": "docker exec nc_redis_master redis-cli -a PMO@123456 info memory | grep used_memory_human",
+        "check": "چک memory usage"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_redis_master --tail 50",
+        "check": "بررسی auth"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_redis_master",
+        "check": null
+      }
+    ]
+  },
+  "nc_redis_replica1": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_redis_replica1 --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "وضعیت replication",
+        "cmd": "docker exec nc_redis_replica1 redis-cli -a PMO@123456 info replication",
+        "check": "بررسی sync status"
+      },
+      {
+        "label": "اتصال به master",
+        "cmd": "docker exec nc_redis_replica1 redis-cli -a PMO@123456 info replication | grep master_host",
+        "check": "اتصال به master"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_redis_replica1 --tail 50",
+        "check": "چک replication offset"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_redis_replica1",
+        "check": null
+      }
+    ]
+  },
+  "nc_redis_replica2": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_redis_replica2 --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "وضعیت replication",
+        "cmd": "docker exec nc_redis_replica2 redis-cli -a PMO@123456 info replication",
+        "check": "بررسی sync status"
+      },
+      {
+        "label": "اتصال به master",
+        "cmd": "docker exec nc_redis_replica2 redis-cli -a PMO@123456 info replication | grep master_host",
+        "check": "اتصال به master"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_redis_replica2 --tail 50",
+        "check": "چک replication offset"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_redis_replica2",
+        "check": null
+      }
+    ]
+  },
+  "nc_sentinel1": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_sentinel1 --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "اطلاعات master",
+        "cmd": "docker exec nc_sentinel1 redis-cli -p 26379 sentinel master nc_master",
+        "check": "شناخت master"
+      },
+      {
+        "label": "sentinel‌های دیگر",
+        "cmd": "docker exec nc_sentinel1 redis-cli -p 26379 sentinel sentinels nc_master",
+        "check": "چک sentinel‌های دیگر"
+      },
+      {
+        "label": "بررسی quorum",
+        "cmd": "docker exec nc_sentinel1 redis-cli -p 26379 sentinel ckquorum nc_master",
+        "check": "بررسی quorum"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_sentinel1 --tail 30",
+        "check": null
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_sentinel1",
+        "check": null
+      }
+    ]
+  },
+  "nc_sentinel2": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_sentinel2 --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "اطلاعات master",
+        "cmd": "docker exec nc_sentinel2 redis-cli -p 26379 sentinel master nc_master",
+        "check": "شناخت master"
+      },
+      {
+        "label": "بررسی quorum",
+        "cmd": "docker exec nc_sentinel2 redis-cli -p 26379 sentinel ckquorum nc_master",
+        "check": "بررسی quorum"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_sentinel2 --tail 30",
+        "check": null
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_sentinel2",
+        "check": null
+      }
+    ]
+  },
+  "nc_sentinel3": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_sentinel3 --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "اطلاعات master",
+        "cmd": "docker exec nc_sentinel3 redis-cli -p 26379 sentinel master nc_master",
+        "check": "شناخت master"
+      },
+      {
+        "label": "بررسی quorum",
+        "cmd": "docker exec nc_sentinel3 redis-cli -p 26379 sentinel ckquorum nc_master",
+        "check": "بررسی quorum"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_sentinel3 --tail 30",
+        "check": null
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_sentinel3",
+        "check": null
+      }
+    ]
+  },
+  "clamav": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect clamav --format='{{.State.Status}} | health: {{.State.Health.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs clamav --tail 50",
+        "check": "health status"
+      },
+      {
+        "label": "بررسی DB ویروس",
+        "cmd": "ls -lh /data/docker/volumes/nextcloud-antivirus_clamav_db/_data/",
+        "check": "بررسی دیتابیس ویروس"
+      },
+      {
+        "label": "آپدیت DB",
+        "cmd": "docker exec clamav freshclam",
+        "check": "بررسی disk space"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart clamav",
+        "check": null
+      }
+    ]
+  },
+  "av_scanner": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect av_scanner --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "تست API",
+        "cmd": "curl -s http://localhost:8000/",
+        "check": "تست API endpoint"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs av_scanner --tail 50",
+        "check": "اتصال به ClamAV"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart av_scanner",
+        "check": null
+      }
+    ]
+  },
+  "av_dashboard": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect av_dashboard --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "تست HTTP",
+        "cmd": "curl -s http://localhost:8090/",
+        "check": "تست HTTP endpoint"
+      },
+      {
+        "label": "بررسی data files",
+        "cmd": "ls -lh /data/docker/volumes/nextcloud-antivirus_dashboard_data/_data/",
+        "check": "بررسی scan_history.json"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs av_dashboard --tail 30",
+        "check": null
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart av_dashboard",
+        "check": null
+      }
+    ]
+  },
+  "av_log_collector": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect av_log_collector --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "collector_pos.txt",
+        "cmd": "cat /data/docker/volumes/nextcloud-antivirus_dashboard_data/_data/collector_pos.txt",
+        "check": "بررسی collector_pos.txt"
+      },
+      {
+        "label": "scan_history.json",
+        "cmd": "ls -lh /data/docker/volumes/nextcloud-antivirus_dashboard_data/_data/",
+        "check": "چک scan_history.json"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs av_log_collector --tail 30",
+        "check": null
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart av_log_collector",
+        "check": null
+      }
+    ]
+  },
+  "nc_prometheus": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_prometheus --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "health check",
+        "cmd": "curl -s http://localhost:9090/-/healthy",
+        "check": "health endpoint"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_prometheus --tail 30",
+        "check": "بررسی config"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_prometheus",
+        "check": null
+      }
+    ]
+  },
+  "nc_grafana": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_grafana --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "health check",
+        "cmd": "curl -s http://localhost:3000/api/health",
+        "check": "health endpoint"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_grafana --tail 30",
+        "check": "اتصال به Prometheus"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_grafana",
+        "check": null
+      }
+    ]
+  },
+  "nc_cadvisor": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_cadvisor --format='{{.State.Status}} | health: {{.State.Health.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "health check",
+        "cmd": "curl -s http://localhost:8080/healthz",
+        "check": "health endpoint"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_cadvisor --tail 30",
+        "check": "دسترسی به Docker socket"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_cadvisor",
+        "check": null
+      }
+    ]
+  },
+  "nc_pg_exporter": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_pg_exporter --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "metrics endpoint",
+        "cmd": "curl -s http://localhost:9187/metrics | head -10",
+        "check": "metrics endpoint"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_pg_exporter --tail 30",
+        "check": "اتصال به PostgreSQL"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_pg_exporter",
+        "check": null
+      }
+    ]
+  },
+  "nc_redis_exporter": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_redis_exporter --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "metrics endpoint",
+        "cmd": "curl -s http://localhost:9121/metrics | head -10",
+        "check": "metrics endpoint"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_redis_exporter --tail 30",
+        "check": "اتصال به Redis"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_redis_exporter",
+        "check": null
+      }
+    ]
+  },
+  "nc_nginx_exporter": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_nginx_exporter --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "metrics endpoint",
+        "cmd": "curl -s http://localhost:9113/metrics | head -10",
+        "check": "metrics endpoint"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_nginx_exporter --tail 30",
+        "check": "اتصال به Nginx"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_nginx_exporter",
+        "check": null
+      }
+    ]
+  },
+  "av_topology": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect av_topology --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "تست HTTP",
+        "cmd": "curl -s http://localhost:3002/health",
+        "check": "تست HTTP endpoint"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs av_topology --tail 30",
+        "check": "اتصال به Docker API"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart av_topology",
+        "check": null
+      }
+    ]
+  },
+  "nc_cron": {
+    "commands": [
+      {
+        "label": "وضعیت container",
+        "cmd": "docker inspect nc_cron --format='{{.State.Status}}'",
+        "check": "بررسی وضعیت container"
+      },
+      {
+        "label": "لاگ‌های اخیر",
+        "cmd": "docker logs nc_cron --tail 30",
+        "check": "بررسی cron jobs"
+      },
+      {
+        "label": "ری‌استارت",
+        "cmd": "docker restart nc_cron",
+        "check": null
+      }
+    ]
+  }
+}
