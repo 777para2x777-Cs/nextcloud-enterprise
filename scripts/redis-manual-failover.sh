@@ -1,46 +1,84 @@
 #!/bin/bash
-# Redis Manual Failover Script
-# Usage: ./redis-manual-failover.sh [nc_redis_replica1|nc_redis_replica2]
-
 NEW_MASTER=${1:-nc_redis_replica1}
 PASS="PMO@123456"
-OTHER=$([ "$NEW_MASTER" = "nc_redis_replica1" ] && echo "nc_redis_replica2" || echo "nc_redis_replica1")
+LOCK="/tmp/redis-failover.lock"
+ALL="nc_redis_master nc_redis_replica1 nc_redis_replica2"
+NETWORK="nextcloud-enterprise_backend"
 
-echo "=== Redis Manual Failover ==="
-echo "New master: $NEW_MASTER"
+if [ -f "$LOCK" ]; then echo "Already running"; exit 1; fi
+touch "$LOCK"
+trap "rm -f $LOCK" EXIT
+
+echo "=== Redis Failover: $NEW_MASTER ==="
 
 # 1. promote
-docker exec $NEW_MASTER redis-cli -a $PASS slaveof no one
+docker exec $NEW_MASTER redis-cli -a $PASS slaveof no one 2>/dev/null
 sleep 2
-echo "✓ $NEW_MASTER promoted to master"
+docker exec $NEW_MASTER redis-cli -a $PASS config set replica-read-only no 2>/dev/null
+echo "✓ $NEW_MASTER → master"
 
-# 2. redis_master proxy را به master جدید هدایت کن
-cd /root/nextcloud
-docker rm -f redis_master
-sed -i "s|TCP:nc_redis_master:6379|TCP:$NEW_MASTER:6379|g" docker-compose.yml
-docker compose up -d redis_master_proxy
-sleep 3
+# 2. proxy آپدیت — فقط container را recreate کن
+docker rm -f redis_socat 2>/dev/null
+docker run -d \
+  --name redis_socat \
+  --network $NETWORK \
+  --network-alias redis_master \
+  --restart unless-stopped \
+  alpine/socat \
+  TCP-LISTEN:6379,fork,reuseaddr TCP:$NEW_MASTER:6379
+sleep 2
 echo "✓ redis_master proxy → $NEW_MASTER"
 
-# 3. flush Redis
+# 3. flush
 docker exec $NEW_MASTER redis-cli -a $PASS flushall 2>/dev/null
-echo "✓ Redis cache flushed"
+echo "✓ cache flushed"
 
-# 4. replica دیگر را slave کن
+# 4. IP master جدید
 NEW_IP=$(docker inspect $NEW_MASTER --format='{{(index .NetworkSettings.Networks "nextcloud-enterprise_backend").IPAddress}}')
-docker exec $OTHER redis-cli -a $PASS slaveof $NEW_IP 6379 2>/dev/null
-echo "✓ $OTHER → slave"
 
-# nc_redis_master را slave کن اگه online باشه
-if docker ps --format '{{.Names}}' | grep -q "^nc_redis_master$"; then
+# 5. بقیه را slave کن
+for node in $ALL; do
+  if [ "$node" != "$NEW_MASTER" ]; then
+    if docker ps --format '{{.Names}}' | grep -q "^${node}$"; then
+      docker exec $node redis-cli -a $PASS slaveof $NEW_IP 6379 2>/dev/null
+      echo "✓ $node → slave"
+    fi
+  fi
+done
+
+# 6. current master ذخیره کن
+echo "$NEW_MASTER" > /tmp/redis-current-master
+
+# 6.1 nc_redis_master را slave کن اگه online شد
+if docker ps --format '{{.Names}}' | grep -q "^nc_redis_master$" && [ "$NEW_MASTER" != "nc_redis_master" ]; then
   docker exec nc_redis_master redis-cli -a $PASS slaveof $NEW_IP 6379 2>/dev/null
   echo "✓ nc_redis_master → slave"
 fi
 
-echo "=== Result ==="
-for c in nc_redis_master nc_redis_replica1 nc_redis_replica2; do
-  echo -n "$c: "
-  docker exec $c redis-cli -a $PASS info replication 2>/dev/null | grep "^role:"
+# 7. nginx recreate
+cd /root/nextcloud
+docker rm -f nc_nginx
+docker compose up -d nginx
+sleep 15
+echo "✓ nginx recreated"
+
+# fix: چند بار چک کن nc_redis_master slave بمونه
+for i in 1 2 3; do
+  sleep 3
+  if docker ps --format '{{.Names}}' | grep -q "^nc_redis_master$" && [ "$NEW_MASTER" != "nc_redis_master" ]; then
+    ROLE=$(docker exec nc_redis_master redis-cli -a $PASS info replication 2>/dev/null | grep "^role:" | tr -d '' | cut -d: -f2)
+    if [ "$ROLE" = "master" ]; then
+      NEW_IP2=$(docker inspect $NEW_MASTER --format='{{(index .NetworkSettings.Networks "nextcloud-enterprise_backend").IPAddress}}')
+      docker exec nc_redis_master redis-cli -a $PASS slaveof $NEW_IP2 6379 2>/dev/null
+      echo "✓ nc_redis_master → slave (attempt $i)"
+    fi
+  fi
 done
 
+echo "=== Result ===" 
+for c in $ALL; do
+  echo -n "$c: "
+  docker exec $c redis-cli -a $PASS info replication 2>/dev/null | grep "^role:" || echo "DOWN"
+done
+docker exec nc_app1 getent hosts redis_master
 curl -sk -o /dev/null -w "Site: %{http_code}\n" --max-time 15 https://localhost/

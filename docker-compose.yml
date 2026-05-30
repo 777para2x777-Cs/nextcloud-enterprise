@@ -230,6 +230,7 @@ services:
   redis_master:
     image: redis:7.4-alpine
     container_name: nc_redis_master
+    hostname: nc_redis_master
     restart: unless-stopped
     command: >
       redis-server
@@ -243,7 +244,9 @@ services:
     volumes:
       - redis_master_data:/data
     networks:
-      - backend
+      backend:
+        aliases:
+          - nc_redis_master_host
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -545,6 +548,6 @@ services:
     image: alpine/socat:latest
     container_name: redis_master
     restart: unless-stopped
-    command: TCP-LISTEN:6379,fork,reuseaddr TCP:nc_redis_replica1:6379
+    command: TCP-LISTEN:6379,fork,reuseaddr TCP:nc_redis_master:6379
     networks:
       - backend
